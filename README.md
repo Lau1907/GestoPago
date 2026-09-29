@@ -36,6 +36,25 @@ La configuración se gestiona en `src/main/resources/application.properties`:
 - `gestopago.auth.refresh-rate-ms`: Intervalo de refresco programado para la renovación del token (por defecto `3600000` ms / 1 hora).
 - `gestopago.service.connect-timeout-ms` y `gestopago.service.read-timeout-ms`: Timeouts de conexión (5000 ms) y lectura (10000 ms).
 
+
+### Variable de entorno `GESTOPAGO_PASSWORD`
+
+La contraseña de autenticación no se guarda en el código ni en el repositorio. Se lee de la variable de entorno `GESTOPAGO_PASSWORD`, que debe definirse antes de ejecutar la aplicación.
+
+**PowerShell (sesión actual):**
+
+```powershell
+$env:GESTOPAGO_PASSWORD="<contraseña_proporcionada>"
+./gradlew bootRun
+```
+
+**IntelliJ IDEA:** Run → Edit Configurations → seleccionar la configuración de la aplicación → Environment variables → agregar `GESTOPAGO_PASSWORD=<contraseña_proporcionada>`.
+
+**Si la variable no está definida:** la aplicación arranca normalmente, pero la renovación automática del token falla y se registra un error en logs. En ese caso `GET /gestopago/productos` responde `401` con el mensaje "No se dispone de un Bearer Token válido para autenticación", salvo que exista un token de respaldo en `gestopago.auth.bearer-token`.
+
+**Decisión técnica:** se usa variable de entorno para no dejar credenciales hardcodeadas en el código fuente, como pide el requerimiento.
+
+
 ## Decisiones técnicas
 - **Spring Cloud OpenFeign**: Facilita la invocación declarativa de servicios HTTP externos sin duplicar código de cliente HTTP.
 - **Renovación programada del token (`@Scheduled`)**: `GestoPagoTokenServiceImpl` ejecuta una tarea periódica anotada con `@Scheduled` para mantener un token válido en base de datos sin requerir autenticación en cada petición individual.

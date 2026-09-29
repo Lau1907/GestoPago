@@ -7,6 +7,7 @@ import com.proyecto.servicios.model.gestopago.GestoPagoAuthResponse;
 import com.proyecto.servicios.repositorys.gestopago.GestoPagoTokenRepository;
 import com.proyecto.servicios.service.GestoPagoTokenService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -46,8 +47,12 @@ public class GestoPagoTokenServiceImpl implements GestoPagoTokenService {
             GestoPagoAuthResponse response = gestoPagoAuthClient.authenticate(
                     idDistribuidor, codigoDispositivo, password);
 
-            if (response == null || response.getToken() == null) {
-                log.error("La respuesta de GestoPago no contiene token");
+            if (response == null || StringUtils.isBlank(response.getToken())) {
+                if (response != null && StringUtils.isNotBlank(response.getMessage())) {
+                    log.error("La respuesta de GestoPago no contiene un token válido: {}", response.getMessage());
+                } else {
+                    log.error("La respuesta de GestoPago no contiene un token válido");
+                }
                 return;
             }
 
