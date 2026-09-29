@@ -8,6 +8,7 @@ import com.proyecto.servicios.service.Impl.GestoPagoProductServiceImpl;
 import feign.FeignException;
 import feign.Request;
 import feign.RequestTemplate;
+import feign.RetryableException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Optional;
 
@@ -179,5 +181,48 @@ class GestoPagoProductServiceImplTest {
         });
 
         assertEquals(HttpStatus.BAD_GATEWAY, exception.getStatus());
+    }
+
+    @Test
+    @DisplayName("Debe lanzar ExternalIntegrationException GATEWAY_TIMEOUT cuando el cliente sufre un timeout (RetryableException)")
+    void obtenerProductos_ErrorTimeout_RetryableException() {
+        // Arrange
+        when(gestoPagoTokenService.obtenerTokenActivo(eq(83), eq("GPS83-TPV-17"))).thenReturn(Optional.of(tokenDummy));
+
+        Request request = Request.create(Request.HttpMethod.GET, "/sistema/service/getProductList.do",
+                new HashMap<>(), null, new RequestTemplate());
+        RetryableException retryableException = new RetryableException(
+                504, "Read timed out", Request.HttpMethod.GET, new Date(), request);
+
+        when(gestoPagoProductClient.getProductList(anyString())).thenThrow(retryableException);
+
+        // Act & Assert
+        ExternalIntegrationException exception = assertThrows(ExternalIntegrationException.class, () -> {
+            gestoPagoProductService.obtenerProductos();
+        });
+
+        assertEquals(HttpStatus.GATEWAY_TIMEOUT, exception.getStatus());
+        assertTrue(exception.getMessage().contains("Tiempo de espera"));
+    }
+
+    @Test
+    @DisplayName("Debe lanzar ExternalIntegrationException UNAUTHORIZED cuando el cliente retorna 401 Unauthorized")
+    void obtenerProductos_ErrorUnauthorized_FeignUnauthorized() {
+        // Arrange
+        when(gestoPagoTokenService.obtenerTokenActivo(eq(83), eq("GPS83-TPV-17"))).thenReturn(Optional.of(tokenDummy));
+
+        Request request = Request.create(Request.HttpMethod.GET, "/sistema/service/getProductList.do",
+                new HashMap<>(), null, new RequestTemplate());
+        FeignException.Unauthorized unauthorizedException = new FeignException.Unauthorized("Unauthorized", request, null, new HashMap<>());
+
+        when(gestoPagoProductClient.getProductList(anyString())).thenThrow(unauthorizedException);
+
+        // Act & Assert
+        ExternalIntegrationException exception = assertThrows(ExternalIntegrationException.class, () -> {
+            gestoPagoProductService.obtenerProductos();
+        });
+
+        assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatus());
+        assertTrue(exception.getMessage().contains("Autenticación no válida"));
     }
 }
