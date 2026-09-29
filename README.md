@@ -33,7 +33,7 @@ La configuración se gestiona en `src/main/resources/application.properties`:
 - `gestopago.auth.codigo-dispositivo`: Identificador del dispositivo TPV (ej. `GPS83-TPV-17`).
 - `gestopago.auth.password`: Contraseña de autenticación expuesta mediante la variable de entorno `GESTOPAGO_PASSWORD` (`${GESTOPAGO_PASSWORD:}`).
 - `gestopago.auth.bearer-token`: Token de respaldo opcional.
-- `gestopago.auth.refresh-rate-ms`: Intervalo de refresco programado para la renovación del token (por defecto `3600000` ms / 1 hora).
+- `gestopago.auth.refresh-rate-ms`: Intervalo de refresco programado para la renovación del token (por defecto `82800000` ms / 23 horas).
 - `gestopago.service.connect-timeout-ms` y `gestopago.service.read-timeout-ms`: Timeouts de conexión (5000 ms) y lectura (10000 ms).
 
 
@@ -57,7 +57,7 @@ $env:GESTOPAGO_PASSWORD="<contraseña_proporcionada>"
 
 ## Decisiones técnicas
 - **Spring Cloud OpenFeign**: Facilita la invocación declarativa de servicios HTTP externos sin duplicar código de cliente HTTP.
-- **Renovación programada del token (`@Scheduled`)**: `GestoPagoTokenServiceImpl` ejecuta una tarea periódica anotada con `@Scheduled` para mantener un token válido en base de datos sin requerir autenticación en cada petición individual.
+- **Renovación programada del token (`@Scheduled`)**: `GestoPagoTokenServiceImpl` ejecuta una tarea periódica anotada con `@Scheduled` cada 23 horas (`82800000` ms). La especificación del proveedor (PuntoRed) establece que se debe tomar un solo token por día (vigencia de 24 horas) y no pedir un token nuevo por petición, por lo que se programa su renovación a las 23 horas para garantizar la vigencia del token antes de que expire.
 - **JAXB para XML y JSON en el controller**: Permite consumir la API XML de GestoPago mediante JAXB (`jakarta.xml.bind`), mientras que el controller serializa el resultado hacia los clientes consumidores en formato JSON estándar.
 - **Excepción propia y `GlobalExceptionHandler`**: Se utiliza `ExternalIntegrationException` para capturar errores de integración y mapear los estados de HTTP (ej. 401 Unauthorized, 403 Forbidden, 504 Gateway Timeout, 502 Bad Gateway, 500 Internal Server Error) en un formato `GenericResponse` unificado.
 - **Timeouts estandarizados**: Se configuran timeouts explícitamente en `GestoPagoFeignConfig`. En el servicio se captura `feign.RetryableException` antes de `FeignException` para traducir los timeouts en HTTP 504 (`GATEWAY_TIMEOUT`) con el mensaje `"Tiempo de espera agotado con el servicio externo"`.
