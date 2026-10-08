@@ -7,8 +7,8 @@ public class PasswordSeguraValidator implements ConstraintValidator<PasswordSegu
 
     @Override
     public boolean isValid(String password, ConstraintValidatorContext context) {
-        if (password == null || password.trim().isEmpty()) {
-            return true; // @NotBlank debe manejar la obligatoriedad
+        if (password == null) {
+            return true; // @NotBlank maneja la nulidad si aplica
         }
         if (password.length() < 8) {
             return false;
