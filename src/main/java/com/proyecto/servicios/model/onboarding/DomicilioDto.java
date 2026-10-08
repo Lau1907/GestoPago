@@ -1,5 +1,6 @@
 package com.proyecto.servicios.model.onboarding;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -11,6 +12,11 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class DomicilioDto {
+
+    @JsonAnySetter
+    public void handleUnknownProperty(String name, Object value) {
+        throw new IllegalArgumentException("Propiedad no reconocida o no permitida: '" + name + "'");
+    }
 
     @NotBlank(message = "La calle es obligatoria")
     @Size(max = 100, message = "La calle no puede exceder 100 caracteres")

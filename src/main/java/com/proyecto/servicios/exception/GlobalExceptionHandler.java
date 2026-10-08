@@ -68,7 +68,15 @@ public class GlobalExceptionHandler {
         log.warn("Error al leer el cuerpo HTTP de la petición: {}", ex.getMessage());
         GenericResponse response = new GenericResponse();
         response.setCodigo(HttpStatus.BAD_REQUEST.value());
-        response.setMensaje("Cuerpo de la petición inválido, mal formado o contiene propiedades no reconocidas");
+        Throwable rootCause = ex.getMostSpecificCause();
+        if (rootCause != null && rootCause.getMessage() != null && !rootCause.getMessage().isBlank()
+                && (rootCause.getMessage().startsWith("Propiedad no reconocida")
+                || rootCause.getMessage().startsWith("El campo")
+                || rootCause instanceof IllegalArgumentException)) {
+            response.setMensaje(rootCause.getMessage());
+        } else {
+            response.setMensaje("Cuerpo de la petición inválido, mal formado o contiene propiedades no reconocidas");
+        }
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
