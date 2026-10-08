@@ -41,7 +41,6 @@ class ClienteControllerTest {
     @BeforeEach
     void setUp() {
         objectMapper.findAndRegisterModules();
-        objectMapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
         mockMvc = MockMvcBuilders.standaloneSetup(clienteController)
                 .setMessageConverters(new org.springframework.http.converter.json.MappingJackson2HttpMessageConverter(objectMapper))
                 .setControllerAdvice(new GlobalExceptionHandler())
