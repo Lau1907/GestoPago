@@ -37,14 +37,31 @@ public class ClienteServiceImpl implements ClienteService {
     private final PasswordEncoder passwordEncoder;
 
     @Value("${onboarding.cuenta.saldo-inicial:0.00}")
-    private BigDecimal saldoInicialDefecto;
+    private BigDecimal saldoInicialDefecto = BigDecimal.ZERO;
 
     private static final SecureRandom RANDOM = new SecureRandom();
+
+    @jakarta.annotation.PostConstruct
+    public void init() {
+        if (saldoInicialDefecto == null) {
+            saldoInicialDefecto = BigDecimal.ZERO;
+        }
+        if (saldoInicialDefecto.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalStateException("La propiedad 'onboarding.cuenta.saldo-inicial' no puede ser negativa: " + saldoInicialDefecto);
+        }
+    }
 
     @Override
     @Transactional
     public ClienteResponse registrarCliente(ClienteCreateRequest request) {
         log.info("Iniciando proceso de registro para nuevo cliente");
+
+        if (saldoInicialDefecto == null) {
+            saldoInicialDefecto = BigDecimal.ZERO;
+        }
+        if (saldoInicialDefecto.compareTo(BigDecimal.ZERO) < 0) {
+            throw new ErrorValidacionException("El saldo inicial configurado en el sistema no puede ser negativo: " + saldoInicialDefecto);
+        }
 
         String curpNorm = request.getCurp().trim().toUpperCase();
         String rfcNorm = request.getRfc().trim().toUpperCase();
@@ -98,13 +115,12 @@ public class ClienteServiceImpl implements ClienteService {
                 .build();
         cliente.setDomicilio(domicilio);
 
-        BigDecimal saldoInicial = request.getSaldoInicial() != null ? request.getSaldoInicial() : saldoInicialDefecto;
         String numeroCuenta = generarNumeroCuentaUnico();
 
         Cuenta cuenta = Cuenta.builder()
                 .cliente(cliente)
                 .numeroCuenta(numeroCuenta)
-                .saldo(saldoInicial)
+                .saldo(saldoInicialDefecto)
                 .estatus(EstatusCuenta.ACTIVA)
                 .build();
         cliente.getCuentas().add(cuenta);

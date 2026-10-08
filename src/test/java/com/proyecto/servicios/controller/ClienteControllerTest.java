@@ -41,7 +41,9 @@ class ClienteControllerTest {
     @BeforeEach
     void setUp() {
         objectMapper.findAndRegisterModules();
+        objectMapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
         mockMvc = MockMvcBuilders.standaloneSetup(clienteController)
+                .setMessageConverters(new org.springframework.http.converter.json.MappingJackson2HttpMessageConverter(objectMapper))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -123,5 +125,45 @@ class ClienteControllerTest {
 
         mockMvc.perform(delete("/clientes/1"))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("POST /clientes con saldoInicial en el body debe retornar HTTP 400 BAD REQUEST por propiedad no reconocida")
+    void registrarCliente_ConSaldoInicialEnBody_Retorna400() throws Exception {
+        String jsonConSaldoInicial = """
+                {
+                    "primerNombre": "Juan",
+                    "apellidoPaterno": "Perez",
+                    "apellidoMaterno": "Lopez",
+                    "curp": "HEGG560427MVZRRL04",
+                    "rfc": "HEGG560427AB1",
+                    "correo": "juan.perez@example.com",
+                    "fechaNacimiento": "1990-05-15",
+                    "telefonoMovil": "9981234567",
+                    "sexo": "H",
+                    "estadoCivil": "S",
+                    "nacionalidad": "Mexicana",
+                    "ocupacion": "Ingeniero",
+                    "empresa": "Tech Corp",
+                    "ingresoMensual": 25000.00,
+                    "domicilio": {
+                        "calle": "Av. Hidalgo",
+                        "numeroExterior": "123",
+                        "colonia": "Centro",
+                        "municipio": "Cancun",
+                        "estado": "Quintana Roo",
+                        "pais": "Mexico",
+                        "codigoPostal": "77500"
+                    },
+                    "password": "Prueba#2026",
+                    "saldoInicial": 500.00
+                }
+                """;
+
+        mockMvc.perform(post("/clientes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonConSaldoInicial))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value(400));
     }
 }

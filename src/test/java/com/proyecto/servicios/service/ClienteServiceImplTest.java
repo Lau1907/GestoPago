@@ -80,7 +80,6 @@ class ClienteServiceImplTest {
                 .ingresoMensual(new BigDecimal("25000.00"))
                 .domicilio(domDto)
                 .password("Prueba#2026")
-                .saldoInicial(new BigDecimal("1000.00"))
                 .build();
 
         clienteMock = Cliente.builder()
@@ -207,5 +206,12 @@ class ClienteServiceImplTest {
         assertEquals(EstatusCuenta.INACTIVA, cuenta.getEstatus());
         assertFalse(usuario.getActivo());
         verify(clienteRepository, times(1)).save(clienteMock);
+    }
+
+    @Test
+    @DisplayName("init debe lanzar IllegalStateException si la propiedad saldoInicialDefecto es negativa")
+    void init_LanzaExcepcionSiSaldoNegativo() {
+        org.springframework.test.util.ReflectionTestUtils.setField(clienteService, "saldoInicialDefecto", new BigDecimal("-100.00"));
+        assertThrows(IllegalStateException.class, () -> clienteService.init());
     }
 }

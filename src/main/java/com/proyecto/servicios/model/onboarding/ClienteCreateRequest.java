@@ -1,5 +1,6 @@
 package com.proyecto.servicios.model.onboarding;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.proyecto.servicios.model.onboarding.validation.MayorDeEdad;
 import com.proyecto.servicios.model.onboarding.validation.PasswordSegura;
 import jakarta.validation.Valid;
@@ -14,6 +15,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties(ignoreUnknown = false)
 public class ClienteCreateRequest {
 
     @NotBlank(message = "El primer nombre es obligatorio")
@@ -87,7 +89,5 @@ public class ClienteCreateRequest {
     @NotBlank(message = "La contraseña es obligatoria")
     @PasswordSegura
     private String password;
-
-    @DecimalMin(value = "0.00", message = "El saldo inicial no puede ser negativo")
-    private BigDecimal saldoInicial;
 }
+

@@ -67,7 +67,6 @@ class OnboardingIntegrationTest {
                 .ingresoMensual(new BigDecimal("30000.00"))
                 .domicilio(dom)
                 .password("Prueba#2026")
-                .saldoInicial(new BigDecimal("500.00"))
                 .build();
 
         MvcResult createResult = mockMvc.perform(post("/clientes")
@@ -76,6 +75,7 @@ class OnboardingIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.usuarioId").exists())
+                .andExpect(jsonPath("$.cuentas[0].saldo").value(0.00))
                 .andReturn();
 
         JsonNode createJson = objectMapper.readTree(createResult.getResponse().getContentAsString());
