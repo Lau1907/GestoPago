@@ -83,3 +83,11 @@ Para ejecutar el conjunto completo de pruebas del proyecto:
 ## Flujo de ramas
 El desarrollo sigue la estrategia GitFlow:
 `feature/gestopago-integracion` -> `develop` -> `main` mediante la creación de un Pull Request (PR) validado y aprobado.
+
+---
+
+## Módulo de Onboarding de Clientes Personas Físicas
+
+Para consultar la documentación técnica completa del módulo de Onboarding (Diagrama ER, Decisiones de tipos de datos, Endpoints REST, Reglas de negocio, Seguridad BCrypt + JWT y Evidencias de pruebas), consulte el documento oficial:
+
+👉 [Documentación Técnica: Onboarding de Clientes Personas Físicas](docs/onboarding-clientes.md)
