@@ -1,5 +1,6 @@
 package com.proyecto.servicios.model.onboarding;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.proyecto.servicios.model.onboarding.validation.MayorDeEdad;
 import com.proyecto.servicios.model.onboarding.validation.PasswordSegura;
@@ -17,6 +18,11 @@ import java.time.LocalDate;
 @Builder
 @JsonIgnoreProperties(ignoreUnknown = false)
 public class ClienteCreateRequest {
+
+    @JsonAnySetter
+    public void handleUnknownProperty(String name, Object value) {
+        throw new IllegalArgumentException("Propiedad no reconocida o no permitida: '" + name + "'");
+    }
 
     @NotBlank(message = "El primer nombre es obligatorio")
     @Pattern(regexp = "^[\\p{L} ]{2,50}$", message = "El primer nombre debe tener entre 2 y 50 caracteres y contener solo letras y espacios")
