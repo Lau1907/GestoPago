@@ -214,4 +214,35 @@ class ClienteServiceImplTest {
         org.springframework.test.util.ReflectionTestUtils.setField(clienteService, "saldoInicialDefecto", new BigDecimal("-100.00"));
         assertThrows(IllegalStateException.class, () -> clienteService.init());
     }
+
+    @Test
+    @DisplayName("obtenerClientesConFiltro debe invocar findAll con especificación y retornar lista mapeada")
+    void obtenerClientesConFiltro_Exito() {
+        ClienteFilterRequest filtro = ClienteFilterRequest.builder()
+                .curp("HEGG560427MVZRRL04")
+                .activo(true)
+                .build();
+
+        when(clienteRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class)))
+                .thenReturn(List.of(clienteMock));
+        when(clienteMapper.toClienteResponseList(any()))
+                .thenReturn(List.of(ClienteResponse.builder().id(1).curp("HEGG560427MVZRRL04").build()));
+
+        List<ClienteResponse> resultado = clienteService.obtenerClientesConFiltro(filtro);
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.size());
+        assertEquals("HEGG560427MVZRRL04", resultado.get(0).getCurp());
+    }
+
+    @Test
+    @DisplayName("obtenerClientesConFiltro debe lanzar ErrorValidacionException si fechaDesde es posterior a fechaHasta")
+    void obtenerClientesConFiltro_FechasInvalidas() {
+        ClienteFilterRequest filtro = ClienteFilterRequest.builder()
+                .fechaDesde(LocalDate.of(2026, 12, 31))
+                .fechaHasta(LocalDate.of(2026, 1, 1))
+                .build();
+
+        assertThrows(ErrorValidacionException.class, () -> clienteService.obtenerClientesConFiltro(filtro));
+    }
 }

@@ -21,6 +21,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -124,6 +125,80 @@ class ClienteControllerTest {
 
         mockMvc.perform(delete("/clientes/1"))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("GET /clientes con filtros dinámicos debe retornar 200 OK y la lista filtrada")
+    void obtenerClientes_ConFiltros_Retorna200() throws Exception {
+        ClienteResponse c1 = ClienteResponse.builder().id(1).curp("HEGG560427MVZRRL04").activo(true).build();
+        when(clienteService.obtenerClientesConFiltro(any())).thenReturn(List.of(c1));
+
+        mockMvc.perform(get("/clientes")
+                        .param("curp", "HEGG560427MVZRRL04")
+                        .param("activo", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[0].curp").value("HEGG560427MVZRRL04"));
+    }
+
+    @Test
+    @DisplayName("GET /clientes con rango de fechas inválido debe retornar 400 con timestamp")
+    void obtenerClientes_RangoFechasInvalido_Retorna400() throws Exception {
+        when(clienteService.obtenerClientesConFiltro(any()))
+                .thenThrow(new com.proyecto.servicios.exception.ErrorValidacionException("La fecha inicial (fechaDesde) no puede ser posterior a la fecha final (fechaHasta)"));
+
+        mockMvc.perform(get("/clientes")
+                        .param("fechaDesde", "2026-12-31")
+                        .param("fechaHasta", "2026-01-01"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value(400))
+                .andExpect(jsonPath("$.mensaje").value("La fecha inicial (fechaDesde) no puede ser posterior a la fecha final (fechaHasta)"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
+    @DisplayName("PUT /clientes/{id} debe retornar HTTP 200 con cliente actualizado")
+    void actualizarCliente_Exito_Retorna200() throws Exception {
+        DomicilioDto dom = DomicilioDto.builder()
+                .calle("Av. Hidalgo")
+                .numeroExterior("123")
+                .colonia("Centro")
+                .municipio("Cancun")
+                .estado("Quintana Roo")
+                .pais("Mexico")
+                .codigoPostal("77500")
+                .build();
+
+        ClienteUpdateRequest updateRequest = ClienteUpdateRequest.builder()
+                .primerNombre("Juan")
+                .apellidoPaterno("Perez")
+                .apellidoMaterno("Lopez")
+                .correo("juan.actualizado@example.com")
+                .fechaNacimiento(LocalDate.of(1990, 5, 15))
+                .telefonoMovil("9981234567")
+                .sexo("H")
+                .estadoCivil("S")
+                .nacionalidad("Mexicana")
+                .ocupacion("Ingeniero")
+                .empresa("Tech Corp")
+                .ingresoMensual(new BigDecimal("30000.00"))
+                .domicilio(dom)
+                .build();
+
+        ClienteResponse response = ClienteResponse.builder()
+                .id(1)
+                .primerNombre("Juan")
+                .correo("juan.actualizado@example.com")
+                .build();
+
+        when(clienteService.actualizarCliente(eq(1), any())).thenReturn(response);
+
+        mockMvc.perform(put("/clientes/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.correo").value("juan.actualizado@example.com"));
     }
 
     @Test

@@ -16,7 +16,7 @@ import java.io.IOException;
 @Component
 public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     @Override
     public void commence(HttpServletRequest request,
@@ -25,9 +25,11 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
 
-        GenericResponse genericResponse = new GenericResponse();
-        genericResponse.setCodigo(HttpStatus.UNAUTHORIZED.value());
-        genericResponse.setMensaje("No autorizado: se requiere un token JWT válido para acceder a este recurso");
+        GenericResponse genericResponse = GenericResponse.builder()
+                .codigo(HttpStatus.UNAUTHORIZED.value())
+                .mensaje("No autorizado: se requiere un token JWT válido para acceder a este recurso")
+                .timestamp(java.time.LocalDateTime.now())
+                .build();
 
         objectMapper.writeValue(response.getOutputStream(), genericResponse);
     }

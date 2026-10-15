@@ -88,6 +88,14 @@ El desarrollo sigue la estrategia GitFlow:
 
 ## Módulo de Onboarding de Clientes Personas Físicas
 
-Para consultar la documentación técnica completa del módulo de Onboarding (Diagrama ER, Decisiones de tipos de datos, Endpoints REST, Reglas de negocio, Seguridad BCrypt + JWT y Evidencias de pruebas), consulte el documento oficial:
+Sistema integral para el onboarding de clientes personas físicas, asignación automática de cuenta bancaria y autenticación JWT:
+- **Endpoints Unificados con Filtros Dinámicos**: `GET /clientes` soporta el DTO `ClienteFilterRequest` (`curp`, `rfc`, `correo`, `numeroCuenta`, `activo`, `fechaDesde`, `fechaHasta`, `primerNombre`, `apellidoPaterno`) implementado con Spring Data JPA Specifications, evitando la duplicidad de endpoints específicos.
+- **Manejador Global de Excepciones**: `@RestControllerAdvice` y `@ExceptionHandler` centralizados que estructuran las respuestas de error en un formato JSON estándar (`codigo`, `mensaje`, `timestamp` y `detalles` para validaciones Bean Validation).
+- **Entidades JPA y Relaciones**: `Cliente` (1-1) `Domicilio`, `Cliente` (1-N) `Cuenta`, `Cliente` (1-1) `Usuario` con índices en base de datos en `curp`, `rfc`, `correo`, `numero_cuenta`.
+- **Reglas de Negocio Estrictas**: Mayoría de edad (`@MayorDeEdad`), contraseñas seguras (`@PasswordSegura`), validación regex de CURP/RFC, teléfonos a 10 dígitos, CP a 5 dígitos, ingresos mayores a cero, saldo no negativo y cuentas automáticas activas.
+- **Seguridad**: Autenticación vía `POST /auth/login`, tokens JWT Stateless, contraseñas protegidas con BCrypt y cascada de baja lógica en clientes, cuentas y usuarios.
 
-👉 [Documentación Técnica: Onboarding de Clientes Personas Físicas](docs/onboarding-clientes.md)
+Para consultar la documentación técnica completa del módulo de Onboarding (Diagrama ER, Decisiones de tipos de datos, Endpoints REST, Reglas de negocio, Seguridad BCrypt + JWT y Evidencias de pruebas), consulte los documentos oficiales:
+
+👉 [Documentación Técnica: Onboarding de Clientes Personas Físicas](docs/onboarding-clientes.md)  
+👉 [Evidencias de Pruebas y Matriz de Ejecución](docs/evidencias.md)

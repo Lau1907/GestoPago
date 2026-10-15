@@ -16,7 +16,7 @@ import java.io.IOException;
 @Component
 public class JwtAccessDeniedHandler implements AccessDeniedHandler {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     @Override
     public void handle(HttpServletRequest request,
@@ -25,9 +25,11 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setStatus(HttpStatus.FORBIDDEN.value());
 
-        GenericResponse genericResponse = new GenericResponse();
-        genericResponse.setCodigo(HttpStatus.FORBIDDEN.value());
-        genericResponse.setMensaje("Acceso denegado: no cuenta con permisos suficientes para acceder a este recurso");
+        GenericResponse genericResponse = GenericResponse.builder()
+                .codigo(HttpStatus.FORBIDDEN.value())
+                .mensaje("Acceso denegado: no cuenta con permisos suficientes para acceder a este recurso")
+                .timestamp(java.time.LocalDateTime.now())
+                .build();
 
         objectMapper.writeValue(response.getOutputStream(), genericResponse);
     }

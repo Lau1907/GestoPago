@@ -119,21 +119,21 @@ El módulo sigue una arquitectura multicapa desacoplada:
 
 | Método | Endpoint | Autenticación Requerida | Códigos HTTP | Descripción |
 | :--- | :--- | :--- | :--- | :--- |
-| **POST** | `/clientes` | Pública | 201, 400, 409 | Registro completo de cliente personas físicas. |
-| **GET** | `/clientes` | Autenticada | 200, 400, 401 | Consulta clientes con filtros `?activo=&fechaDesde=&fechaHasta=`. |
+| **POST** | `/clientes` | Pública | 201, 400, 409 | Registro completo de cliente personas físicas (datos personales, domicilio, cuenta bancaria automática y usuario con BCrypt). |
+| **GET** | `/clientes` | Autenticada | 200, 400, 401 | Consulta clientes con filtros dinámicos (`ClienteFilterRequest`: `?curp=&rfc=&correo=&numeroCuenta=&activo=&fechaDesde=&fechaHasta=&primerNombre=&apellidoPaterno=`). |
 | **GET** | `/clientes/{id}` | Autenticada | 200, 401, 404 | Consulta cliente por ID. |
-| **GET** | `/clientes/curp/{curp}` | Autenticada | 200, 401, 404 | Consulta cliente por CURP. |
-| **GET** | `/clientes/rfc/{rfc}` | Autenticada | 200, 401, 404 | Consulta cliente por RFC. |
-| **GET** | `/clientes/cuenta/{numeroCuenta}` | Autenticada | 200, 401, 404 | Consulta cliente dueño del número de cuenta. |
-| **GET** | `/clientes/correo` | Autenticada | 200, 401, 404 | Consulta cliente por correo electrónico (`?correo=...`). |
-| **PUT** | `/clientes/{id}` | Autenticada | 200, 400, 401, 404, 409 | Actualización de cliente. |
-| **DELETE** | `/clientes/{id}` | Autenticada | 204, 401, 404 | Baja lógica del cliente, cuentas y usuario. |
-| **GET** | `/cuentas/{numeroCuenta}` | Autenticada | 200, 401, 404 | Consulta de cuenta por número. |
+| **PUT** | `/clientes/{id}` | Autenticada | 200, 400, 401, 404, 409 | Actualización de cliente (bloqueo estricto de CURP, RFC y número de cuenta). |
+| **DELETE** | `/clientes/{id}` | Autenticada | 204, 401, 404 | Baja lógica del cliente, desactivación de cuentas y de usuario asociado. |
+| **GET** | `/clientes/curp/{curp}` | Autenticada | 200, 401, 404 | *(DEPRECATED - Usar `GET /clientes?curp=...`)* Consulta cliente por CURP. |
+| **GET** | `/clientes/rfc/{rfc}` | Autenticada | 200, 401, 404 | *(DEPRECATED - Usar `GET /clientes?rfc=...`)* Consulta cliente por RFC. |
+| **GET** | `/clientes/cuenta/{numeroCuenta}` | Autenticada | 200, 401, 404 | *(DEPRECATED - Usar `GET /clientes?numeroCuenta=...`)* Consulta cliente por cuenta. |
+| **GET** | `/clientes/correo` | Autenticada | 200, 401, 404 | *(DEPRECATED - Usar `GET /clientes?correo=...`)* Consulta cliente por correo (`?correo=...`). |
+| **GET** | `/cuentas/{numeroCuenta}` | Autenticada | 200, 401, 404 | Consulta de cuenta bancaria por número de cuenta. |
 | **GET** | `/cuentas` | Autenticada | 200, 401 | Lista de cuentas por estatus (`?estatus=ACTIVA`). |
 | **GET** | `/cuentas/{numeroCuenta}/saldo` | Autenticada | 200, 401, 404 | Consulta de saldo de cuenta. |
-| **POST** | `/auth/login` | Pública | 200, 400, 401, 403 | Inicio de sesión y generación de token JWT. |
+| **POST** | `/auth/login` | Pública | 200, 400, 401, 403 | Inicio de sesión con correo y contraseña; generación de token JWT. |
 | **GET** | `/usuarios/{id}` | Autenticada | 200, 401, 403, 404 | Consulta de datos del propio usuario. |
-| **PUT** | `/usuarios/{id}/password` | Autenticada | 204, 400, 401, 403, 404 | Cambio de contraseña del propio usuario. |
+| **PUT** | `/usuarios/{id}/password` | Autenticada | 204, 400, 401, 403, 404 | Cambio de contraseña del propio usuario (validando contraseña actual). |
 
 ---
 
