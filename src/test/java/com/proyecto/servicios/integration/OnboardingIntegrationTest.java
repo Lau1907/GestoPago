@@ -97,25 +97,37 @@ class OnboardingIntegrationTest {
         JsonNode loginJson = objectMapper.readTree(loginResult.getResponse().getContentAsString());
         String token = loginJson.get("token").asText();
 
+        com.proyecto.servicios.model.onboarding.ClienteIdRequest idReq = com.proyecto.servicios.model.onboarding.ClienteIdRequest.builder()
+                .id(clienteId)
+                .build();
+
         // 3. Consultar cliente CON token (exitoso 200 OK)
-        mockMvc.perform(get("/clientes/" + clienteId)
-                        .header("Authorization", "Bearer " + token))
+        mockMvc.perform(post("/clientes/consultar")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(idReq)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.primerNombre").value("Maria"));
 
         // 4. Consultar sin token (falla 401 Unauthorized)
-        mockMvc.perform(get("/clientes/" + clienteId))
+        mockMvc.perform(post("/clientes/consultar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(idReq)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.codigo").value(401));
 
         // 5. Baja lógica del cliente (usando el token vigente)
-        mockMvc.perform(delete("/clientes/" + clienteId)
-                        .header("Authorization", "Bearer " + token))
+        mockMvc.perform(post("/clientes/eliminar")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(idReq)))
                 .andExpect(status().isNoContent());
 
         // 6. Intentar consultar con el MISMO token después de la baja (falla 401 porque el usuario quedó inactivo en BD)
-        mockMvc.perform(get("/clientes/" + clienteId)
-                        .header("Authorization", "Bearer " + token))
+        mockMvc.perform(post("/clientes/consultar")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(idReq)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.codigo").value(401));
 

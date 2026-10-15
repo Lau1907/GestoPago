@@ -149,7 +149,7 @@ class ClienteCamposDesconocidosIntegrationTest {
     }
 
     @Test
-    @DisplayName("PUT /clientes/{id} con curp en el body debe retornar 400 Bad Request indicando que no es modificable")
+    @DisplayName("PUT /clientes con curp en el body debe retornar 400 Bad Request indicando que no es modificable")
     void putCliente_ConCurp_Retorna400() throws Exception {
         ClienteCreateRequest request = crearClienteCreateRequestValido("HEGG560427MVZRRL01", "HEGG560427AB2", "test.curp@example.com");
         MvcResult createResult = mockMvc.perform(post("/clientes")
@@ -162,8 +162,9 @@ class ClienteCamposDesconocidosIntegrationTest {
         int clienteId = createJson.get("id").asInt();
         String token = obtenerToken("test.curp@example.com", "Prueba#2026");
 
-        String bodyPutConCurp = """
+        String bodyPutConCurp = String.format("""
                 {
+                    "id": %d,
                     "primerNombre": "Juan",
                     "apellidoPaterno": "Perez",
                     "apellidoMaterno": "Lopez",
@@ -187,9 +188,9 @@ class ClienteCamposDesconocidosIntegrationTest {
                     },
                     "curp": "HEGG560427MVZRRL09"
                 }
-                """;
+                """, clienteId);
 
-        mockMvc.perform(put("/clientes/" + clienteId)
+        mockMvc.perform(put("/clientes")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(bodyPutConCurp))
@@ -199,7 +200,7 @@ class ClienteCamposDesconocidosIntegrationTest {
     }
 
     @Test
-    @DisplayName("PUT /clientes/{id} con rfc en el body debe retornar 400 Bad Request indicando que no es modificable")
+    @DisplayName("PUT /clientes con rfc en el body debe retornar 400 Bad Request indicando que no es modificable")
     void putCliente_ConRfc_Retorna400() throws Exception {
         ClienteCreateRequest request = crearClienteCreateRequestValido("HEGG560427MVZRRL02", "HEGG560427AB3", "test.rfc@example.com");
         MvcResult createResult = mockMvc.perform(post("/clientes")
@@ -212,8 +213,9 @@ class ClienteCamposDesconocidosIntegrationTest {
         int clienteId = createJson.get("id").asInt();
         String token = obtenerToken("test.rfc@example.com", "Prueba#2026");
 
-        String bodyPutConRfc = """
+        String bodyPutConRfc = String.format("""
                 {
+                    "id": %d,
                     "primerNombre": "Juan",
                     "apellidoPaterno": "Perez",
                     "apellidoMaterno": "Lopez",
@@ -237,9 +239,9 @@ class ClienteCamposDesconocidosIntegrationTest {
                     },
                     "rfc": "HEGG560427AB9"
                 }
-                """;
+                """, clienteId);
 
-        mockMvc.perform(put("/clientes/" + clienteId)
+        mockMvc.perform(put("/clientes")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(bodyPutConRfc))
@@ -249,7 +251,7 @@ class ClienteCamposDesconocidosIntegrationTest {
     }
 
     @Test
-    @DisplayName("PUT /clientes/{id} con un campo desconocido cualquiera debe retornar 400 Bad Request")
+    @DisplayName("PUT /clientes con un campo desconocido cualquiera debe retornar 400 Bad Request")
     void putCliente_ConCampoDesconocido_Retorna400() throws Exception {
         ClienteCreateRequest request = crearClienteCreateRequestValido("HEGG560427MVZRRL03", "HEGG560427AB4", "test.unknown@example.com");
         MvcResult createResult = mockMvc.perform(post("/clientes")
@@ -262,8 +264,9 @@ class ClienteCamposDesconocidosIntegrationTest {
         int clienteId = createJson.get("id").asInt();
         String token = obtenerToken("test.unknown@example.com", "Prueba#2026");
 
-        String bodyPutConCampoDesconocido = """
+        String bodyPutConCampoDesconocido = String.format("""
                 {
+                    "id": %d,
                     "primerNombre": "Juan",
                     "apellidoPaterno": "Perez",
                     "apellidoMaterno": "Lopez",
@@ -287,9 +290,9 @@ class ClienteCamposDesconocidosIntegrationTest {
                     },
                     "campoDesconocido": "valorInvalido"
                 }
-                """;
+                """, clienteId);
 
-        mockMvc.perform(put("/clientes/" + clienteId)
+        mockMvc.perform(put("/clientes")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(bodyPutConCampoDesconocido))
@@ -314,8 +317,9 @@ class ClienteCamposDesconocidosIntegrationTest {
         int clienteId = createJson.get("id").asInt();
         String token = obtenerToken("test.valid@example.com", "Prueba#2026");
 
-        String bodyPutValido = """
+        String bodyPutValido = String.format("""
                 {
+                    "id": %d,
                     "primerNombre": "Juan Carlos",
                     "apellidoPaterno": "Perez",
                     "apellidoMaterno": "Lopez",
@@ -338,9 +342,9 @@ class ClienteCamposDesconocidosIntegrationTest {
                         "codigoPostal": "77500"
                     }
                 }
-                """;
+                """, clienteId);
 
-        mockMvc.perform(put("/clientes/" + clienteId)
+        mockMvc.perform(put("/clientes")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(bodyPutValido))

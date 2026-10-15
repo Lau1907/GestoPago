@@ -1,9 +1,6 @@
 package com.proyecto.servicios.controller;
 
-import com.proyecto.servicios.model.onboarding.ClienteCreateRequest;
-import com.proyecto.servicios.model.onboarding.ClienteFilterRequest;
-import com.proyecto.servicios.model.onboarding.ClienteResponse;
-import com.proyecto.servicios.model.onboarding.ClienteUpdateRequest;
+import com.proyecto.servicios.model.onboarding.*;
 import com.proyecto.servicios.service.ClienteService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -29,64 +26,42 @@ public class ClienteController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    @Operation(summary = "Consultar clientes con soporte de filtros dinámicos (CURP, RFC, correo, cuenta, rango fechas, estatus)")
-    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Consultar clientes con soporte de filtros dinámicos combinables (CURP, RFC, correo, cuenta, fechas, estatus)")
+    @PostMapping(value = "/buscar", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ClienteResponse>> obtenerClientes(
-            @ModelAttribute ClienteFilterRequest filtro) {
-        List<ClienteResponse> response = clienteService.obtenerClientesConFiltro(filtro);
+            @Valid @RequestBody(required = false) ClienteFilterRequest filtro) {
+        List<ClienteResponse> response = clienteService.obtenerClientesConFiltro(
+                filtro != null ? filtro : new ClienteFilterRequest()
+        );
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "Consultar cliente por ID")
-    @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ClienteResponse> obtenerClientePorId(@PathVariable Integer id) {
-        ClienteResponse response = clienteService.obtenerPorId(id);
+    @Operation(summary = "Consultar cliente por ID recibido en el Request Body")
+    @PostMapping(value = {"/consultar", "/buscar-por-id"}, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ClienteResponse> obtenerClientePorId(@Valid @RequestBody ClienteIdRequest request) {
+        ClienteResponse response = clienteService.obtenerPorId(request.getId());
         return ResponseEntity.ok(response);
     }
 
-    @Deprecated(since = "2.0")
-    @Operation(summary = "DEPRECATED: Usar GET /clientes?curp={curp} en su lugar")
-    @GetMapping(value = "/curp/{curp}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ClienteResponse> obtenerClientePorCurp(@PathVariable String curp) {
-        ClienteResponse response = clienteService.obtenerPorCurp(curp);
-        return ResponseEntity.ok(response);
-    }
-
-    @Deprecated(since = "2.0")
-    @Operation(summary = "DEPRECATED: Usar GET /clientes?rfc={rfc} en su lugar")
-    @GetMapping(value = "/rfc/{rfc}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ClienteResponse> obtenerClientePorRfc(@PathVariable String rfc) {
-        ClienteResponse response = clienteService.obtenerPorRfc(rfc);
-        return ResponseEntity.ok(response);
-    }
-
-    @Deprecated(since = "2.0")
-    @Operation(summary = "DEPRECATED: Usar GET /clientes?numeroCuenta={numeroCuenta} en su lugar")
-    @GetMapping(value = "/cuenta/{numeroCuenta}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ClienteResponse> obtenerClientePorNumeroCuenta(@PathVariable String numeroCuenta) {
-        ClienteResponse response = clienteService.obtenerPorNumeroCuenta(numeroCuenta);
-        return ResponseEntity.ok(response);
-    }
-
-    @Deprecated(since = "2.0")
-    @Operation(summary = "DEPRECATED: Usar GET /clientes?correo={correo} en su lugar")
-    @GetMapping(value = "/correo", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ClienteResponse> obtenerClientePorCorreo(@RequestParam String correo) {
-        ClienteResponse response = clienteService.obtenerPorCorreo(correo);
-        return ResponseEntity.ok(response);
-    }
-
-    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Actualizar cliente existente mediante Request Body (incluyendo ID del cliente)")
+    @PutMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ClienteResponse> actualizarCliente(
-            @PathVariable Integer id,
             @Valid @RequestBody ClienteUpdateRequest request) {
-        ClienteResponse response = clienteService.actualizarCliente(id, request);
+        ClienteResponse response = clienteService.actualizarCliente(request.getId(), request);
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping(value = "/{id}")
-    public ResponseEntity<Void> eliminarCliente(@PathVariable Integer id) {
-        clienteService.eliminarCliente(id);
+    @Operation(summary = "Baja lógica de cliente mediante Request Body (POST)")
+    @PostMapping(value = {"/eliminar", "/baja"}, consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> eliminarCliente(@Valid @RequestBody ClienteIdRequest request) {
+        clienteService.eliminarCliente(request.getId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Baja lógica de cliente mediante Request Body (DELETE)")
+    @DeleteMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> eliminarClienteDelete(@Valid @RequestBody ClienteIdRequest request) {
+        clienteService.eliminarCliente(request.getId());
         return ResponseEntity.noContent().build();
     }
 }

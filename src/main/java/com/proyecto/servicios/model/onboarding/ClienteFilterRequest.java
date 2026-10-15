@@ -30,10 +30,12 @@ public class ClienteFilterRequest {
     private Boolean activo;
 
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    @com.fasterxml.jackson.annotation.JsonFormat(pattern = "yyyy-MM-dd")
     @Schema(description = "Fecha inicial de registro (inclusive)", example = "2026-01-01")
     private LocalDate fechaDesde;
 
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    @com.fasterxml.jackson.annotation.JsonFormat(pattern = "yyyy-MM-dd")
     @Schema(description = "Fecha final de registro (inclusive)", example = "2026-12-31")
     private LocalDate fechaHasta;
 
