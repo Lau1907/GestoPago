@@ -26,6 +26,10 @@ public class ClienteUpdateRequest {
         throw new IllegalArgumentException("Propiedad no reconocida o no permitida: '" + name + "'");
     }
 
+    @NotNull(message = "El ID del cliente es obligatorio")
+    @Positive(message = "El ID del cliente debe ser un número positivo mayor a cero")
+    private Integer id;
+
     @NotBlank(message = "El primer nombre es obligatorio")
     @Pattern(regexp = "^[\\p{L} ]{2,50}$", message = "El primer nombre debe tener entre 2 y 50 caracteres y contener solo letras y espacios")
     private String primerNombre;
