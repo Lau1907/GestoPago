@@ -1,42 +1,57 @@
 # Evidencias de Ejecución y Pruebas del Sistema
 
+Este documento recopila las evidencias gráficas y de ejecución correspondientes a las pruebas automatizadas del proyecto y la verificación de endpoints mediante Postman.
+
+---
+
 ## 1. Resumen de Ejecución de Pruebas Automatizadas (`./gradlew test`)
 
 - **Resultado de la Suite:** `BUILD SUCCESSFUL`
-- **Total de Pruebas Ejecutadas:** 63 pruebas
-- **Pruebas Exitosas:** 63
-- **Pruebas Fallidas:** 0
+- **Total de Pruebas Ejecutadas:** 77 pruebas
+- **Pruebas Exitosas:** 77
 - **Pruebas Omitidas:** 0
 - **Cobertura de Componentes:**
   - Pruebas Unitarias de Servicios (Cliente, Cuenta, Usuario, Autenticación).
   - Pruebas Unitarias de Validadores Personalizados (`@MayorDeEdad`, `@PasswordSegura`, CURP, RFC, Teléfono, CP, Nombres).
   - Pruebas Unitarias de Controladores (`MockMvc` standalone con `GlobalExceptionHandler`).
+  - Pruebas Unitarias del Manejador Global de Excepciones (`GlobalExceptionHandlerTest`: 404, 409, 401, 403, 400).
   - Pruebas de Integración End-to-End (`@SpringBootTest` con base de datos H2 en memoria y Flyway V2).
+  - Pruebas de Integración de Filtros Dinámicos vía DTO (`ClienteFiltrosDinamicosIntegrationTest`).
   - Pruebas de Integración de Rechazo de Campos Desconocidos y No Modificables (`ClienteCamposDesconocidosIntegrationTest`).
 
 ---
 
-## 2. Ejemplos de Petición y Respuesta de Endpoints (API REST)
+## 2. Evidencias Gráficas de Endpoints (Postman)
 
-| Método | Endpoint | Descripción | Body de Petición (Ejemplo) | Código HTTP | Respuesta (Ejemplo) |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **POST** | `/clientes` | Registro de Cliente, Domicilio, Cuenta y Usuario | `{"primerNombre":"Juan","apellidoPaterno":"Perez","apellidoMaterno":"Lopez","curp":"HEGG560427MVZRRL04","rfc":"HEGG560427AB1","correo":"juan.perez@example.com","fechaNacimiento":"1990-05-15","telefonoMovil":"9981234567","sexo":"H","estadoCivil":"S","nacionalidad":"Mexicana","ocupacion":"Ingeniero","empresa":"Tech Corp","ingresoMensual":25000.00,"domicilio":{"calle":"Av. Hidalgo","numeroExterior":"123","colonia":"Centro","municipio":"Cancun","estado":"Quintana Roo","pais":"Mexico","codigoPostal":"77500"},"password":"[OCULTA_POR_SEGURIDAD]"}` | `201 Created` | `{"id":1,"primerNombre":"Juan","segundoNombre":null,"apellidoPaterno":"Perez","apellidoMaterno":"Lopez","curp":"HEGG560427MVZRRL04","rfc":"HEGG560427AB1","correo":"juan.perez@example.com","fechaNacimiento":"1990-05-15","telefonoMovil":"9981234567","sexo":"H","estadoCivil":"S","nacionalidad":"Mexicana","ocupacion":"Ingeniero","empresa":"Tech Corp","ingresoMensual":25000.00,"activo":true,"domicilio":{"id":1,"calle":"Av. Hidalgo","numeroExterior":"123","colonia":"Centro","municipio":"Cancun","estado":"Quintana Roo","pais":"Mexico","codigoPostal":"77500"},"cuentas":[{"id":1,"clienteId":1,"numeroCuenta":"8493021948","saldo":0.00,"estatus":"ACTIVA"}],"usuarioId":1}` |
-| **POST** | `/clientes` | Intento de registro enviando `saldoInicial` no permitido | `{"primerNombre":"Juan",...,"saldoInicial":500.00}` | `400 Bad Request` | `{"codigo":400,"mensaje":"Propiedad no reconocida o no permitida: 'saldoInicial'"}` |
-| **POST** | `/auth/login` | Autenticación y generación de JWT | `{"correo":"juan.perez@example.com","password":"[OCULTA_POR_SEGURIDAD]"}` | `200 OK` | `{"token":"eyJhbGciOiJIUzI1...","tipo":"Bearer","expiraEn":3600000}` |
-| **GET** | `/clientes/1` | Consulta de cliente por ID (con token Bearer) | *N/A (Header Authorization)* | `200 OK` | `{"id":1,"primerNombre":"Juan","apellidoPaterno":"Perez","curp":"HEGG560427MVZRRL04","correo":"juan.perez@example.com","activo":true}` |
-| **GET** | `/clientes/curp/HEGG560427MVZRRL04` | Consulta de cliente por CURP | *N/A (Header Authorization)* | `200 OK` | `{"id":1,"primerNombre":"Juan","curp":"HEGG560427MVZRRL04"}` |
-| **GET** | `/clientes/rfc/HEGG560427AB1` | Consulta de cliente por RFC | *N/A (Header Authorization)* | `200 OK` | `{"id":1,"primerNombre":"Juan","rfc":"HEGG560427AB1"}` |
-| **GET** | `/clientes/cuenta/8493021948` | Consulta de cliente por número de cuenta | *N/A (Header Authorization)* | `200 OK` | `{"id":1,"primerNombre":"Juan","cuentas":[{"numeroCuenta":"8493021948"}]}` |
-| **GET** | `/clientes/correo?correo=juan.perez@example.com` | Consulta de cliente por correo | *N/A (Header Authorization)* | `200 OK` | `{"id":1,"primerNombre":"Juan","correo":"juan.perez@example.com"}` |
-| **GET** | `/clientes?activo=true` | Consulta de todos los clientes activos | *N/A (Header Authorization)* | `200 OK` | `[{"id":1,"primerNombre":"Juan","activo":true}]` |
-| **PUT** | `/clientes/1` | Actualización de datos personales y contacto | `{"primerNombre":"Juan Carlos","apellidoPaterno":"Perez","apellidoMaterno":"Lopez","correo":"juan.perez@example.com","fechaNacimiento":"1990-05-15","telefonoMovil":"9987654321","sexo":"H","estadoCivil":"C","nacionalidad":"Mexicana","ocupacion":"Director","empresa":"Tech Corp","ingresoMensual":35000.00,"domicilio":{"calle":"Av. Tulum","numeroExterior":"45","colonia":"Centro","municipio":"Cancun","estado":"Quintana Roo","pais":"Mexico","codigoPostal":"77500"}}` | `200 OK` | `{"id":1,"primerNombre":"Juan Carlos","telefonoMovil":"9987654321","ingresoMensual":35000.00}` |
-| **PUT** | `/clientes/1` | Intento de modificar campo no modificable `curp` | `{"primerNombre":"Juan",...,"curp":"HEGG560427MVZRRL09"}` | `400 Bad Request` | `{"codigo":400,"mensaje":"El campo 'curp' no es modificable"}` |
-| **PUT** | `/clientes/1` | Intento de modificar campo no modificable `rfc` | `{"primerNombre":"Juan",...,"rfc":"HEGG560427AB9"}` | `400 Bad Request` | `{"codigo":400,"mensaje":"El campo 'rfc' no es modificable"}` |
-| **GET** | `/cuentas/8493021948` | Consulta de cuenta por número | *N/A (Header Authorization)* | `200 OK` | `{"id":1,"clienteId":1,"numeroCuenta":"8493021948","saldo":1000.00,"estatus":"ACTIVA"}` |
-| **GET** | `/cuentas/8493021948/saldo` | Consulta de saldo de cuenta | *N/A (Header Authorization)* | `200 OK` | `{"numeroCuenta":"8493021948","saldo":1000.00}` |
-| **GET** | `/cuentas?estatus=ACTIVA` | Lista de cuentas activas | *N/A (Header Authorization)* | `200 OK` | `[{"numeroCuenta":"8493021948","saldo":1000.00,"estatus":"ACTIVA"}]` |
-| **GET** | `/usuarios/1` | Consulta de usuario por ID (propio usuario) | *N/A (Header Authorization)* | `200 OK` | `{"id":1,"clienteId":1,"correo":"juan.perez@example.com","activo":true}` |
-| **PUT** | `/usuarios/1/password` | Cambio de contraseña del propio usuario | `{"passwordActual":"[OCULTA]","passwordNueva":"[OCULTA]"}` | `204 No Content` | *Sin contenido* |
-| **DELETE** | `/clientes/1` | Baja lógica de cliente | *N/A (Header Authorization)* | `204 No Content` | *Sin contenido* |
-| **GET** | `/clientes/1` | Intento de consulta sin token JWT | *N/A (Sin Header)* | `401 Unauthorized` | `{"codigo":401,"mensaje":"No autorizado: se requiere un token JWT válido para acceder a este recurso"}` |
-| **POST** | `/auth/login` | Intento de login de usuario dado de baja | `{"correo":"juan.perez@example.com","password":"[OCULTA]"}` | `403 Forbidden` | `{"codigo":403,"mensaje":"El usuario se encuentra inactivo"}` |
+### A. Registro Exitoso de Cliente (`POST /clientes`)
+Se envía el JSON completo con datos personales, domicilio, ocupación y contraseña. El sistema responde con un código **201 Created**, generando la cuenta bancaria automática con saldo inicial `0.00` y el usuario asociado.
+
+> ![Registro Exitoso 201 Created](evidencias/postman-201-created.png)
+
+---
+
+### B. Autenticación y Generación de Token JWT (`POST /auth/login`)
+El usuario inicia sesión utilizando su correo electrónico y contraseña segura. El sistema valida las credenciales y genera exitosamente el token **Bearer JWT** con un código **200 OK**.
+
+> ![Login Exitoso 200 OK](evidencias/postman-login-jwt.png)
+
+---
+
+### C. Consulta con Filtros Dinámicos (`GET /clientes?curp=...`)
+Utilizando el token Bearer en los headers de autorización, se realiza la consulta flexible filtrando por CURP, retornando de forma eficiente el registro correspondiente con código **200 OK**.
+
+> ![Consulta con Filtros Dinámicos](evidencias/postman-get-filter.png)
+
+---
+
+### D. Baja Lógica en Cascada (`DELETE /clientes/{id}`)
+Se ejecuta la baja lógica del cliente. El sistema procesa la petición de manera transaccional desactivando al cliente, sus cuentas y su usuario asociado, respondiendo con un código **204 No Content**.
+
+> ![Baja Lógica 204 No Content](evidencias/postman-delete-cascade.png)
+
+---
+
+### E. Bloqueo Inmediato por Inactividad (`403 Forbidden`)
+Al intentar iniciar sesión nuevamente con las credenciales del cliente dado de baja, el filtro de seguridad intercepta la petición y deniega el acceso respondiendo con un código **403 Forbidden** y el mensaje de usuario inactivo.
+
+> ![Bloqueo de Usuario Inactivo 403](evidencias/postman-login-inactivo.png)

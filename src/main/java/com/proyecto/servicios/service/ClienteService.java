@@ -1,6 +1,7 @@
 package com.proyecto.servicios.service;
 
 import com.proyecto.servicios.model.onboarding.ClienteCreateRequest;
+import com.proyecto.servicios.model.onboarding.ClienteFilterRequest;
 import com.proyecto.servicios.model.onboarding.ClienteResponse;
 import com.proyecto.servicios.model.onboarding.ClienteUpdateRequest;
 
@@ -10,6 +11,8 @@ import java.util.List;
 public interface ClienteService {
 
     ClienteResponse registrarCliente(ClienteCreateRequest request);
+
+    List<ClienteResponse> obtenerClientesConFiltro(ClienteFilterRequest filtro);
 
     List<ClienteResponse> obtenerTodos(Boolean activo, LocalDate fechaDesde, LocalDate fechaHasta);
 
