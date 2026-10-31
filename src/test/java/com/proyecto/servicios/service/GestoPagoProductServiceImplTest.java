@@ -225,4 +225,50 @@ class GestoPagoProductServiceImplTest {
         assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatus());
         assertTrue(exception.getMessage().contains("Autenticación no válida"));
     }
+
+    @Test
+    @DisplayName("Modo Mock: Debe retornar catálogo simulado con idProducto=1 cuando mockEnabled está activo y ocurre error de cliente")
+    void obtenerProductos_ModoMockActivo_RetornaCatalogoSimulado() {
+        // Arrange
+        ReflectionTestUtils.setField(gestoPagoProductService, "mockEnabled", true);
+        ReflectionTestUtils.setField(gestoPagoProductService, "password", "");
+        when(gestoPagoTokenService.obtenerTokenActivo(eq(83), eq("GPS83-TPV-17"))).thenReturn(Optional.of(tokenDummy));
+
+        Request request = Request.create(Request.HttpMethod.GET, "/sistema/service/getProductList.do",
+                new HashMap<>(), null, new RequestTemplate());
+        FeignException.Unauthorized unauthorizedException = new FeignException.Unauthorized("Unauthorized", request, null, new HashMap<>());
+        when(gestoPagoProductClient.getProductList(anyString())).thenThrow(unauthorizedException);
+
+        // Act
+        GestoPagoProductListResponse response = gestoPagoProductService.obtenerProductos();
+
+        // Assert
+        assertNotNull(response);
+        assertNotNull(response.getMensaje());
+        assertEquals("01", response.getMensaje().getCodigo());
+        assertTrue(response.getProductos().stream().anyMatch(p -> Integer.valueOf(1).equals(p.getIdProducto())));
+        verify(gestoPagoProductClient, times(1)).getProductList(anyString());
+    }
+
+    @Test
+    @DisplayName("Modo Mock: Debe interceptar error 401 de GestoPago y retornar catálogo simulado")
+    void obtenerProductos_Error401ConMockActivo_InterceptaYRetornaCatalogoSimulado() {
+        // Arrange
+        ReflectionTestUtils.setField(gestoPagoProductService, "mockEnabled", true);
+        ReflectionTestUtils.setField(gestoPagoProductService, "password", "password_prueba");
+        when(gestoPagoTokenService.obtenerTokenActivo(eq(83), eq("GPS83-TPV-17"))).thenReturn(Optional.of(tokenDummy));
+
+        Request request = Request.create(Request.HttpMethod.GET, "/sistema/service/getProductList.do",
+                new HashMap<>(), null, new RequestTemplate());
+        FeignException.Unauthorized unauthorizedException = new FeignException.Unauthorized("Unauthorized", request, null, new HashMap<>());
+        when(gestoPagoProductClient.getProductList(anyString())).thenThrow(unauthorizedException);
+
+        // Act
+        GestoPagoProductListResponse response = gestoPagoProductService.obtenerProductos();
+
+        // Assert
+        assertNotNull(response);
+        assertEquals("01", response.getMensaje().getCodigo());
+        assertTrue(response.getProductos().stream().anyMatch(p -> Integer.valueOf(1).equals(p.getIdProducto())));
+    }
 }

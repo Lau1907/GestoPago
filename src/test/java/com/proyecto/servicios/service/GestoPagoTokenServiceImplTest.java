@@ -123,4 +123,68 @@ class GestoPagoTokenServiceImplTest {
         assertTrue(resultado.isPresent());
         assertEquals("token_valido_12345", resultado.get().getToken());
     }
+
+    @Test
+    @DisplayName("Debe persistir token de respaldo cuando la llamada remota falla con excepción y existe fallbackBearerToken")
+    void renovarToken_ApiFallaConFallback_GuardaTokenRespaldo() {
+        // Arrange
+        ReflectionTestUtils.setField(gestoPagoTokenService, "fallbackBearerToken", "Bearer fallback_token_sandbox");
+        when(gestoPagoAuthClient.authenticate(eq(83), eq("GPS83-TPV-17"), eq("password_prueba")))
+                .thenThrow(new RuntimeException("Connection timed out"));
+        when(tokenRepository.findByIdDistribuidorAndCodigoDispositivo(eq(83), eq("GPS83-TPV-17")))
+                .thenReturn(Optional.empty());
+
+        // Act
+        gestoPagoTokenService.renovarToken();
+
+        // Assert
+        verify(tokenRepository, times(1)).save(argThat(entity ->
+                "fallback_token_sandbox".equals(entity.getToken())
+                        && Boolean.TRUE.equals(entity.getActivo())
+                        && Integer.valueOf(83).equals(entity.getIdDistribuidor())
+                        && "GPS83-TPV-17".equals(entity.getCodigoDispositivo())
+        ));
+    }
+
+    @Test
+    @DisplayName("Debe persistir token de respaldo cuando la contraseña está vacía y existe fallbackBearerToken")
+    void renovarToken_PasswordVaciaConFallback_GuardaTokenRespaldo() {
+        // Arrange
+        ReflectionTestUtils.setField(gestoPagoTokenService, "password", "");
+        ReflectionTestUtils.setField(gestoPagoTokenService, "fallbackBearerToken", "static_sandbox_token");
+        when(tokenRepository.findByIdDistribuidorAndCodigoDispositivo(eq(83), eq("GPS83-TPV-17")))
+                .thenReturn(Optional.empty());
+
+        // Act
+        gestoPagoTokenService.renovarToken();
+
+        // Assert
+        verify(gestoPagoAuthClient, never()).authenticate(any(), any(), any());
+        verify(tokenRepository, times(1)).save(argThat(entity ->
+                "static_sandbox_token".equals(entity.getToken())
+                        && Boolean.TRUE.equals(entity.getActivo())
+        ));
+    }
+
+    @Test
+    @DisplayName("Debe retornar y persistir token de respaldo en obtenerTokenActivo cuando no existe en BD")
+    void obtenerTokenActivo_NoExisteEnBDPeroHayFallback_GuardaYRetornaToken() {
+        // Arrange
+        ReflectionTestUtils.setField(gestoPagoTokenService, "fallbackBearerToken", "fallback_disponible");
+        GestoPagoToken tokenGuardado = new GestoPagoToken();
+        tokenGuardado.setToken("fallback_disponible");
+        tokenGuardado.setActivo(true);
+
+        when(tokenRepository.findByIdDistribuidorAndCodigoDispositivo(eq(83), eq("GPS83-TPV-17")))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(tokenGuardado));
+
+        // Act
+        Optional<GestoPagoToken> resultado = gestoPagoTokenService.obtenerTokenActivo(83, "GPS83-TPV-17");
+
+        // Assert
+        assertTrue(resultado.isPresent());
+        assertEquals("fallback_disponible", resultado.get().getToken());
+        verify(tokenRepository, times(1)).save(any(GestoPagoToken.class));
+    }
 }

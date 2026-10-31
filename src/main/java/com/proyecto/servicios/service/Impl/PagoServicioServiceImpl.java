@@ -75,6 +75,12 @@ public class PagoServicioServiceImpl implements PagoServicioService {
     @Value("${gestopago.auth.bearer-token:}")
     private String fallbackBearerToken;
 
+    @Value("${gestopago.auth.password:}")
+    private String password;
+
+    @Value("${gestopago.mock.enabled:false}")
+    private boolean mockEnabled;
+
     public PagoServicioServiceImpl(CuentaRepository cuentaRepository,
                                   TransaccionPagoRepository transaccionPagoRepository,
                                   GestoPagoProductService gestoPagoProductService,
@@ -337,6 +343,7 @@ public class PagoServicioServiceImpl implements PagoServicioService {
                                  Integer idServicio) {
         log.info("Invocando cliente Feign POST /sistema/service/sendTx.do idProducto={} monto={} ref={}",
                 idProducto, monto, referencia);
+
         long startTime = System.currentTimeMillis();
         try {
             return gestoPagoPaymentClient.sendTx(
@@ -348,10 +355,52 @@ public class PagoServicioServiceImpl implements PagoServicioService {
                     tipoFront,
                     idServicio
             );
+        } catch (FeignException.Unauthorized e) {
+            if (mockEnabled) {
+                log.warn("Error 401 en sendTx.do de GestoPago. Modo Mock activo: interceptando y retornando transacción simulada exitosa");
+                return generarXmlSimuladoExitoso(referencia);
+            }
+            throw e;
+        } catch (RetryableException e) {
+            if (mockEnabled) {
+                log.warn("Timeout en sendTx.do de GestoPago. Modo Mock activo: interceptando y retornando transacción simulada exitosa");
+                return generarXmlSimuladoExitoso(referencia);
+            }
+            throw e;
+        } catch (FeignException e) {
+            if (mockEnabled) {
+                log.warn("Error Feign ({}) en sendTx.do de GestoPago. Modo Mock activo: interceptando y retornando transacción simulada exitosa", e.status());
+                return generarXmlSimuladoExitoso(referencia);
+            }
+            throw e;
+        } catch (Exception e) {
+            if (mockEnabled) {
+                log.warn("Error de conexión en sendTx.do de GestoPago: {}. Modo Mock activo: interceptando y retornando transacción simulada exitosa", e.getMessage());
+                return generarXmlSimuladoExitoso(referencia);
+            }
+            throw e;
         } finally {
             long duration = System.currentTimeMillis() - startTime;
             log.info("Fin de la invocación externa a sendTx.do en {} ms", duration);
         }
+    }
+
+    private String generarXmlSimuladoExitoso(String referencia) {
+        long randomFolio = Math.abs(referencia.hashCode()) % 1000000L + 100000L;
+        return String.format("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <RESPONSE>
+                    <MENSAJE>
+                        <CODIGO>01</CODIGO>
+                        <TEXTO>Transaccion aprobada exitosamente (Modo Simulado)</TEXTO>
+                    </MENSAJE>
+                    <TRANSACCION>
+                        <FOLIO>MOCK-%d</FOLIO>
+                        <AUTORIZACION>AUTH-%d</AUTORIZACION>
+                        <TICKET>RECIBO-MOCK-%s</TICKET>
+                    </TRANSACCION>
+                </RESPONSE>
+                """, randomFolio, randomFolio + 777L, referencia);
     }
 
     private String resolverBearerToken() {
@@ -366,6 +415,11 @@ public class PagoServicioServiceImpl implements PagoServicioService {
             return fallbackBearerToken;
         }
 
+        if (mockEnabled) {
+            log.info("Modo Mock activo: utilizando token simulado para pago");
+            return "mock-gestopago-jwt-token-distribuidor-" + idDistribuidor;
+        }
+
         log.info("No se encontró token activo en BD para pago. Intentando renovación de token...");
         try {
             gestoPagoTokenService.renovarToken();
@@ -375,6 +429,10 @@ public class PagoServicioServiceImpl implements PagoServicioService {
             }
         } catch (Exception e) {
             log.error("Error al intentar renovar token de GestoPago: {}", e.getMessage());
+        }
+
+        if (mockEnabled) {
+            return "mock-gestopago-jwt-token-distribuidor-" + idDistribuidor;
         }
 
         throw new ExternalIntegrationException("No se dispone de un Bearer Token válido para procesar el pago", HttpStatus.UNAUTHORIZED);

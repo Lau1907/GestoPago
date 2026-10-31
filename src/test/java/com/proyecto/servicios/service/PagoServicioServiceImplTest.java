@@ -469,4 +469,38 @@ class PagoServicioServiceImplTest {
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatus());
     }
+
+    @Test
+    @DisplayName("Modo Mock: Debe procesar el pago exitosamente y debitar saldo simulando respuesta sendTx ante 401")
+    void pagarServicio_ModoMockActivo_ProcesaPagoExitosamente() {
+        // Arrange
+        ReflectionTestUtils.setField(pagoServicioService, "mockEnabled", true);
+        ReflectionTestUtils.setField(pagoServicioService, "password", "");
+        ReflectionTestUtils.setField(pagoServicioService, "idDistribuidor", 83);
+        ReflectionTestUtils.setField(pagoServicioService, "codigoDispositivo", "GPS83-TPV-17");
+
+        when(transaccionPagoRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
+        when(cuentaRepository.findByNumeroCuentaForUpdate("1234567890")).thenReturn(Optional.of(cuentaDummy));
+        when(gestoPagoProductService.obtenerProductos()).thenReturn(catalogoDummy);
+        when(gestoPagoTokenService.obtenerTokenActivo(eq(83), eq("GPS83-TPV-17"))).thenReturn(Optional.of(tokenDummy));
+        when(transaccionPagoRepository.save(any(TransaccionPago.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        feign.Request feignRequest = feign.Request.create(feign.Request.HttpMethod.POST, "/sistema/service/sendTx.do",
+                new java.util.HashMap<>(), null, new feign.RequestTemplate());
+        feign.FeignException.Unauthorized unauthorized = new feign.FeignException.Unauthorized("Unauthorized", feignRequest, null, new java.util.HashMap<>());
+        when(gestoPagoPaymentClient.sendTx(any(), any(), any(), any(), any(), any(), any())).thenThrow(unauthorized);
+
+        // Act
+        PagoServicioResponse response = pagoServicioService.pagarServicio(requestValido);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals("EXITOSA", response.getEstado());
+        assertEquals("01", response.getCodigoGestoPago());
+        assertNotNull(response.getFolioGestoPago());
+        assertTrue(response.getFolioGestoPago().startsWith("MOCK-"));
+        assertEquals(new BigDecimal("990.00"), cuentaDummy.getSaldo());
+        verify(cuentaRepository, times(1)).save(cuentaDummy);
+        verify(gestoPagoPaymentClient, times(1)).sendTx(any(), any(), any(), any(), any(), any(), any());
+    }
 }
