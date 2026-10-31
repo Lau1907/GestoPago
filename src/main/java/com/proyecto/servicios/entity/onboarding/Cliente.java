@@ -10,7 +10,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "clientes")
+@Table(name = "clientes", indexes = {
+        @Index(name = "ix_clientes_curp", columnList = "curp", unique = true),
+        @Index(name = "ix_clientes_rfc", columnList = "rfc", unique = true),
+        @Index(name = "ix_clientes_correo", columnList = "correo", unique = true),
+        @Index(name = "ix_clientes_activo", columnList = "activo"),
+        @Index(name = "ix_clientes_fecha_registro", columnList = "fecha_registro")
+})
 @Getter
 @Setter
 @NoArgsConstructor

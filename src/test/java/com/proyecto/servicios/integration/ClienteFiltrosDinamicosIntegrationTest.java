@@ -1,0 +1,183 @@
+package com.proyecto.servicios.integration;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.proyecto.servicios.model.onboarding.ClienteCreateRequest;
+import com.proyecto.servicios.model.onboarding.DomicilioDto;
+import com.proyecto.servicios.model.onboarding.LoginRequest;
+import com.proyecto.servicios.service.GestoPagoTokenService;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+class ClienteFiltrosDinamicosIntegrationTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @MockBean
+    private GestoPagoTokenService gestoPagoTokenService;
+
+    private DomicilioDto crearDomicilio() {
+        return DomicilioDto.builder()
+                .calle("Calle 50")
+                .numeroExterior("100")
+                .colonia("Centro")
+                .municipio("Merida")
+                .estado("Yucatan")
+                .pais("Mexico")
+                .codigoPostal("97000")
+                .build();
+    }
+
+    private String registrarYObtenerToken(String curp, String rfc, String correo) throws Exception {
+        ClienteCreateRequest request = ClienteCreateRequest.builder()
+                .primerNombre("Fernando")
+                .apellidoPaterno("Castro")
+                .apellidoMaterno("Vargas")
+                .curp(curp)
+                .rfc(rfc)
+                .correo(correo)
+                .fechaNacimiento(LocalDate.of(1988, 3, 25))
+                .telefonoMovil("9991234567")
+                .sexo("H")
+                .estadoCivil("S")
+                .nacionalidad("Mexicana")
+                .ocupacion("Desarrollador")
+                .empresa("Fintech Innovacion")
+                .ingresoMensual(new BigDecimal("40000.00"))
+                .domicilio(crearDomicilio())
+                .password("Prueba#2026")
+                .build();
+
+        mockMvc.perform(post("/clientes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        LoginRequest loginRequest = LoginRequest.builder()
+                .correo(correo)
+                .password("Prueba#2026")
+                .build();
+
+        MvcResult loginResult = mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode loginJson = objectMapper.readTree(loginResult.getResponse().getContentAsString());
+        return loginJson.get("token").asText();
+    }
+
+    @Test
+    @DisplayName("POST /clientes/buscar con filtros dinámicos por CURP, RFC, correo y número de cuenta")
+    void consultarClientesConFiltrosDinamicos() throws Exception {
+        String curp = "CASF880325HMCRRN01";
+        String rfc = "CASF880325AB1";
+        String correo = "fernando.castro1@example.com";
+
+        String token = registrarYObtenerToken(curp, rfc, correo);
+
+        // 1. Filtrar por CURP
+        com.proyecto.servicios.model.onboarding.ClienteFilterRequest fCurp = com.proyecto.servicios.model.onboarding.ClienteFilterRequest.builder()
+                .curp(curp)
+                .build();
+
+        MvcResult resCurp = mockMvc.perform(post("/clientes/buscar")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(fCurp)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].curp").value(curp))
+                .andExpect(jsonPath("$[0].correo").value(correo))
+                .andReturn();
+
+        JsonNode jsonCurp = objectMapper.readTree(resCurp.getResponse().getContentAsString());
+        String numeroCuenta = jsonCurp.get(0).get("cuentas").get(0).get("numeroCuenta").asText();
+
+        // 2. Filtrar por RFC
+        com.proyecto.servicios.model.onboarding.ClienteFilterRequest fRfc = com.proyecto.servicios.model.onboarding.ClienteFilterRequest.builder()
+                .rfc(rfc)
+                .build();
+
+        mockMvc.perform(post("/clientes/buscar")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(fRfc)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].rfc").value(rfc));
+
+        // 3. Filtrar por Correo
+        com.proyecto.servicios.model.onboarding.ClienteFilterRequest fCorreo = com.proyecto.servicios.model.onboarding.ClienteFilterRequest.builder()
+                .correo(correo)
+                .build();
+
+        mockMvc.perform(post("/clientes/buscar")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(fCorreo)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].correo").value(correo));
+
+        // 4. Filtrar por Número de Cuenta
+        com.proyecto.servicios.model.onboarding.ClienteFilterRequest fCuenta = com.proyecto.servicios.model.onboarding.ClienteFilterRequest.builder()
+                .numeroCuenta(numeroCuenta)
+                .build();
+
+        mockMvc.perform(post("/clientes/buscar")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(fCuenta)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].curp").value(curp));
+
+        // 5. Filtrar por Estatus Activo y Rango de Fechas Válido
+        com.proyecto.servicios.model.onboarding.ClienteFilterRequest fFechas = com.proyecto.servicios.model.onboarding.ClienteFilterRequest.builder()
+                .activo(true)
+                .fechaDesde(LocalDate.of(2020, 1, 1))
+                .fechaHasta(LocalDate.of(2030, 12, 31))
+                .build();
+
+        mockMvc.perform(post("/clientes/buscar")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(fFechas)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+
+        // 6. Rango de Fechas Inválido (fechaDesde posterior a fechaHasta) retorna 400 con timestamp
+        com.proyecto.servicios.model.onboarding.ClienteFilterRequest fFechasInv = com.proyecto.servicios.model.onboarding.ClienteFilterRequest.builder()
+                .fechaDesde(LocalDate.of(2030, 1, 1))
+                .fechaHasta(LocalDate.of(2020, 1, 1))
+                .build();
+
+        mockMvc.perform(post("/clientes/buscar")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(fFechasInv)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value(400))
+                .andExpect(jsonPath("$.timestamp").exists())
+                .andExpect(jsonPath("$.mensaje").value("La fecha inicial (fechaDesde) no puede ser posterior a la fecha final (fechaHasta)"));
+    }
+}

@@ -4,16 +4,19 @@ import com.proyecto.servicios.entity.onboarding.*;
 import com.proyecto.servicios.exception.*;
 import com.proyecto.servicios.mapper.ClienteMapper;
 import com.proyecto.servicios.model.onboarding.ClienteCreateRequest;
+import com.proyecto.servicios.model.onboarding.ClienteFilterRequest;
 import com.proyecto.servicios.model.onboarding.ClienteResponse;
 import com.proyecto.servicios.model.onboarding.ClienteUpdateRequest;
 import com.proyecto.servicios.model.onboarding.DomicilioDto;
 import com.proyecto.servicios.repositorys.onboarding.ClienteRepository;
+import com.proyecto.servicios.repositorys.onboarding.ClienteSpecifications;
 import com.proyecto.servicios.repositorys.onboarding.CuentaRepository;
 import com.proyecto.servicios.repositorys.onboarding.UsuarioRepository;
 import com.proyecto.servicios.service.ClienteService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -141,30 +144,29 @@ public class ClienteServiceImpl implements ClienteService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ClienteResponse> obtenerTodos(Boolean activo, LocalDate fechaDesde, LocalDate fechaHasta) {
-        log.info("Consultando clientes con filtros - activo: {}, fechaDesde: {}, fechaHasta: {}", activo, fechaDesde, fechaHasta);
+    public List<ClienteResponse> obtenerClientesConFiltro(ClienteFilterRequest filtro) {
+        log.info("Consultando clientes con filtros dinámicos: {}", filtro);
 
-        if (fechaDesde != null && fechaHasta != null && fechaDesde.isAfter(fechaHasta)) {
+        if (filtro != null && filtro.getFechaDesde() != null && filtro.getFechaHasta() != null
+                && filtro.getFechaDesde().isAfter(filtro.getFechaHasta())) {
             throw new ErrorValidacionException("La fecha inicial (fechaDesde) no puede ser posterior a la fecha final (fechaHasta)");
         }
 
-        List<Cliente> lista;
-        if (fechaDesde != null && fechaHasta != null) {
-            LocalDateTime desde = fechaDesde.atStartOfDay();
-            LocalDateTime hasta = fechaHasta.atTime(LocalTime.MAX);
-            lista = clienteRepository.findByFechaRegistroBetweenWithDomicilio(desde, hasta);
-            if (activo != null) {
-                lista = lista.stream().filter(c -> c.getActivo().equals(activo)).toList();
-            }
-        } else if (Boolean.TRUE.equals(activo)) {
-            lista = clienteRepository.findByActivoTrueWithDomicilio();
-        } else {
-            lista = clienteRepository.findAllWithDomicilio();
-            if (activo != null) {
-                lista = lista.stream().filter(c -> c.getActivo().equals(activo)).toList();
-            }
-        }
+        Specification<Cliente> spec = ClienteSpecifications.conFiltro(filtro);
+        List<Cliente> lista = clienteRepository.findAll(spec);
         return clienteMapper.toClienteResponseList(lista);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ClienteResponse> obtenerTodos(Boolean activo, LocalDate fechaDesde, LocalDate fechaHasta) {
+        log.info("Consultando clientes con filtros - activo: {}, fechaDesde: {}, fechaHasta: {}", activo, fechaDesde, fechaHasta);
+        ClienteFilterRequest filtro = ClienteFilterRequest.builder()
+                .activo(activo)
+                .fechaDesde(fechaDesde)
+                .fechaHasta(fechaHasta)
+                .build();
+        return obtenerClientesConFiltro(filtro);
     }
 
     @Override
