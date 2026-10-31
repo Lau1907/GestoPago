@@ -46,7 +46,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health").permitAll()
                         // Rutas de actividades anteriores preservadas como públicas
                         .requestMatchers("/personas", "/personasActualiza", "/personasElimina").permitAll()
-                        .requestMatchers("/gestopago/**").permitAll()
+                        .requestMatchers("/gestopago/**", "/pagos/**").permitAll()
                         // Todas las demás rutas requieren autenticación
                         .anyRequest().authenticated()
                 )
