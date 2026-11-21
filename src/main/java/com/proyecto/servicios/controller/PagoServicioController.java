@@ -61,4 +61,17 @@ public class PagoServicioController {
         PagoServicioResponse response = pagoServicioService.consultarTransaccion(request);
         return ResponseEntity.ok(response);
     }
+
+    @Operation(summary = "Consultar historial de transacciones de compra/pago mediante Request Body")
+    @PostMapping(
+            value = {"/historial", "/transacciones"},
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<java.util.List<PagoServicioResponse>> obtenerHistorial(
+            @RequestBody(required = false) com.proyecto.servicios.model.gestopago.PagoHistorialRequest request) {
+        log.info("Petición REST recibida en endpoint POST /pagos/historial");
+        java.util.List<PagoServicioResponse> response = pagoServicioService.obtenerHistorial(request);
+        return ResponseEntity.ok(response);
+    }
 }

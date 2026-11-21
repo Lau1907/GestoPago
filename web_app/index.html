@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GestoPago - Banca Digital Web</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💳</text></svg>">
+</head>
+<body>
+
+  <!-- =========================================================================
+       APP BAR SUPERIOR
+       ========================================================================= -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon">🏦</div>
+      <div>
+        <div class="brand-title">GestoPago Web</div>
+        <div class="brand-subtitle" id="header-user-email">Canal WEB Seguro (Sesión Única)</div>
+      </div>
+    </div>
+
+    <div class="header-account">
+      <!-- Indicador de Saldo y Cuenta (solo autenticado) -->
+      <div class="account-badge" id="header-account-badge" style="display: none;">
+        <div class="account-badge-label" id="header-account-num">Cuenta: •••• ----</div>
+        <div class="account-badge-balance" id="header-balance">$0.00 MXN</div>
+      </div>
+
+      <button class="btn-header" onclick="App.switchTab('perfil')" title="Configuración y Conectividad">
+        ⚙️ <span class="hide-mobile">Ajustes</span>
+      </button>
+      <button class="btn-header" onclick="Auth.logout()" title="Cerrar Sesión Segura">
+        🚪 <span class="hide-mobile">Salir</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       1. VISTAS DE AUTENTICACIÓN Y 2FA
+       ========================================================================= -->
+  <div id="auth-views">
+    <!-- PANTALLA LOGIN -->
+    <div id="auth-login-view" class="auth-wrapper">
+      <div class="auth-card">
+        <div class="auth-icon-circle">🔐</div>
+        <h1 class="auth-title">Iniciar Sesión</h1>
+        <p class="auth-subtitle">Acceso exclusivo a la Plataforma Web de Pagos</p>
+        
+        <div class="channel-pill">
+          Dispositivo: <strong>WEB</strong> • <span id="current-backend-url-label">http://localhost:8080</span>
+        </div>
+
+        <div id="login-error" class="status-banner rejected" style="display: none; margin-bottom: 16px;"></div>
+
+        <form id="login-form">
+          <div class="form-group">
+            <label for="login-email">Correo Electrónico</label>
+            <input type="email" id="login-email" class="form-input" required placeholder="usuario@correo.com" autocomplete="email">
+          </div>
+
+          <div class="form-group">
+            <label for="login-password">Contraseña</label>
+            <div class="password-input-wrapper">
+              <input type="password" id="login-password" class="form-input" required placeholder="••••••••" autocomplete="current-password">
+              <button type="button" class="btn-toggle-password" onclick="Auth.togglePasswordVisibility()" title="Mostrar u ocultar contraseña">
+                <span id="password-toggle-icon">👁️</span>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" id="btn-login-submit" class="btn-primary" style="margin-top: 10px;">
+            <span>Ingresar a la Plataforma</span> ➔
+          </button>
+        </form>
+
+        <p style="font-size: 11px; color: var(--text-secondary); margin-top: 20px; line-height: 1.4;">
+          * Control de Sesión Única activo: Si inicia sesión en la aplicación móvil, esta sesión web será invalidada automáticamente por seguridad.
+        </p>
+      </div>
+    </div>
+
+    <!-- PANTALLA 2FA (OTP 6 DÍGITOS) -->
+    <div id="auth-2fa-view" class="auth-wrapper" style="display: none;">
+      <div class="auth-card">
+        <div class="auth-icon-circle" style="color: var(--accent); background: rgba(0, 168, 107, 0.1);">🛡️</div>
+        <h1 class="auth-title">Verificación 2FA</h1>
+        <p class="auth-subtitle">
+          Ingrese el código numérico de 6 dígitos emitido para:<br>
+          <strong id="otp-user-email">usuario@correo.com</strong>
+        </p>
+
+        <!-- Banner DEV si el backend retorna el OTP en la respuesta -->
+        <div id="otp-dev-banner" style="display: none; background: #FFFBEB; border: 1px solid #FCD34D; border-radius: 8px; padding: 10px; margin-bottom: 16px; font-size: 13px; color: #92400E;">
+          🔑 Código OTP generado por el backend: <strong id="otp-dev-code" style="font-size: 15px;"></strong>
+        </div>
+
+        <div id="otp-error" class="status-banner rejected" style="display: none; margin-bottom: 16px;"></div>
+
+        <form id="otp-form">
+          <div class="form-group" style="text-align: center;">
+            <label for="otp-code">Código de Seguridad (6 dígitos)</label>
+            <input type="text" id="otp-code" class="form-input otp-input" maxlength="6" pattern="[0-9]{6}" required placeholder="000000" autocomplete="off">
+          </div>
+
+          <button type="submit" id="btn-otp-submit" class="btn-primary" style="margin-top: 10px;">
+            <span>Validar y Acceder</span> ✓
+          </button>
+
+          <button type="button" class="btn-secondary" style="margin-top: 10px; width: 100%;" onclick="Auth.logout()">
+            Cancelar y volver al Login
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       2. VISTAS PRINCIPALES DE LA APLICACIÓN (CATÁLOGO, HISTORIAL, PERFIL)
+       ========================================================================= -->
+  <div id="app-views" style="display: none;">
+    <!-- NAVEGACIÓN ENTRE SECCIONES -->
+    <nav class="nav-tabs">
+      <button class="tab-btn active" data-tab="catalogo" onclick="App.switchTab('catalogo')">
+        🛒 Catálogo de Servicios
+      </button>
+      <button class="tab-btn" data-tab="historial" onclick="App.switchTab('historial')">
+        📜 Historial de Compras
+      </button>
+      <button class="tab-btn" data-tab="perfil" onclick="App.switchTab('perfil')">
+        👤 Perfil y Conectividad
+      </button>
+    </nav>
+
+    <main class="main-container">
+
+      <!-- SECCIÓN A: CATÁLOGO DE PRODUCTOS -->
+      <section id="section-catalogo" class="view-section active">
+        <!-- Buscador y chips de categorías -->
+        <div class="search-filter-bar">
+          <div class="search-input-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-catalog" placeholder="Buscar por servicio (Agua, Luz, Teléfono, Gas) o producto...">
+          </div>
+          <div class="category-chips" id="category-chips">
+            <!-- Renderizado dinámico de chips -->
+          </div>
+        </div>
+
+        <div id="catalogo-loading" style="display: none; justify-content: center; align-items: center; padding: 40px; font-weight: 600; color: var(--primary);">
+          ⏳ Consultando catálogo oficial en GestoPago...
+        </div>
+
+        <div id="catalogo-error" class="status-banner rejected" style="display: none; margin-bottom: 20px;"></div>
+
+        <div id="catalogo-empty" style="display: none; text-align: center; padding: 60px 20px; color: var(--text-secondary);">
+          <div style="font-size: 40px; margin-bottom: 10px;">🔍</div>
+          <h3>No se encontraron productos</h3>
+          <p>Intente con otro término de búsqueda o seleccione otra categoría.</p>
+        </div>
+
+        <div class="products-grid" id="products-grid">
+          <!-- Renderizado dinámico de tarjetas de productos -->
+        </div>
+      </section>
+
+      <!-- SECCIÓN B: HISTORIAL DE COMPRAS (ÚNICAMENTE EXITOSAS) -->
+      <section id="section-historial" class="view-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div>
+            <h2 style="font-size: 20px; font-weight: 700;">Historial de Compras Exitosas</h2>
+            <p style="font-size: 13px; color: var(--text-secondary);">Consulta tus comprobantes y tickets bancarios aprobados</p>
+          </div>
+          <button class="btn-secondary" onclick="Historial.cargar()" id="btn-refresh-history">
+            🔄 Actualizar
+          </button>
+        </div>
+
+        <div id="history-empty" style="display: none; text-align: center; padding: 60px 20px; background: white; border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
+          <div style="font-size: 44px; margin-bottom: 12px;">🧾</div>
+          <h3>Sin compras exitosas registradas</h3>
+          <p style="color: var(--text-secondary); margin-bottom: 18px;">Realiza tu primer pago de servicios desde el catálogo oficial.</p>
+          <button class="btn-primary" style="display: inline-flex; width: auto; padding: 8px 24px;" onclick="App.switchTab('catalogo')">
+            Explorar Catálogo
+          </button>
+        </div>
+
+        <div id="history-list">
+          <!-- Renderizado dinámico de tarjetas de historial -->
+        </div>
+      </section>
+
+      <!-- SECCIÓN C: PERFIL Y CONECTIVIDAD -->
+      <section id="section-perfil" class="view-section">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+          <!-- Tarjeta de Perfil -->
+          <div style="background: white; padding: 24px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+            <h3 style="margin-bottom: 16px; font-size: 16px; color: var(--primary);">👤 Información del Titular</h3>
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px;">
+              <div><strong>Nombre:</strong> <span id="profile-name">-</span></div>
+              <div><strong>Correo:</strong> <span id="profile-email">-</span></div>
+              <div><strong>Cuenta Bancaria:</strong> <span id="profile-account">-</span></div>
+              <div><strong>Saldo Actual:</strong> <span id="profile-balance" style="color: var(--accent); font-weight: bold;">$0.00 MXN</span></div>
+              <div><strong>Canal Activo:</strong> <span class="badge-success">WEB</span></div>
+            </div>
+          </div>
+
+          <!-- Tarjeta de Conectividad con Backend Spring Boot -->
+          <div style="background: white; padding: 24px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+            <h3 style="margin-bottom: 16px; font-size: 16px; color: var(--primary);">🌐 Conectividad del Backend REST</h3>
+            <div class="form-group">
+              <label for="settings-base-url">Base URL del Servidor Spring Boot</label>
+              <input type="text" id="settings-base-url" class="form-input" value="http://localhost:8080">
+            </div>
+
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;">
+              <button class="btn-secondary" onclick="App.setUrlPredefinida('http://localhost:8080')">localhost:8080</button>
+              <button class="btn-secondary" onclick="App.setUrlPredefinida('http://127.0.0.1:8080')">127.0.0.1:8080</button>
+            </div>
+
+            <button class="btn-primary" onclick="App.guardarConfiguracionUrl()">
+              Guardar y Reconectar
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- =========================================================================
+       3. MODAL DE COMPRA / CONFIRMACIÓN PREVIA CON LOS 4 ESTADOS
+       ========================================================================= -->
+  <div id="modal-compra" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">Confirmar Compra de Servicio</div>
+        <button class="modal-close" onclick="Pago.cerrarModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">
+          Revise cuidadosamente los datos antes de autorizar el débito bancario:
+        </p>
+
+        <!-- Tarjeta de resumen de compra adaptable -->
+        <div style="background: var(--surface); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color); font-size: 13px; line-height: 1.8;">
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-secondary);">Servicio:</span>
+            <strong id="modal-prod-servicio">-</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-secondary);">Producto:</span>
+            <strong id="modal-prod-nombre">-</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-secondary);">Cuenta a Debitar:</span>
+            <strong id="modal-cuenta-numero">-</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-secondary);">Saldo Disponible:</span>
+            <strong id="modal-cuenta-saldo" style="color: var(--accent);">-</strong>
+          </div>
+        </div>
+
+        <div style="margin-top: 14px;">
+          <div class="form-group">
+            <label for="modal-input-referencia">Referencia del Servicio (Teléfono, Contrato o Cuenta) *</label>
+            <input type="text" id="modal-input-referencia" class="form-input" placeholder="Ej. 9981234567" required>
+          </div>
+
+          <div class="form-group" id="modal-dv-container" style="display: none;">
+            <label for="modal-input-dv">Dígito Verificador (Obligatorio para este servicio) *</label>
+            <input type="text" id="modal-input-dv" class="form-input" placeholder="Ej. 0 o 1">
+          </div>
+
+          <div class="form-group">
+            <label for="modal-input-monto">Monto a Pagar (MXN) *</label>
+            <input type="number" step="0.01" id="modal-input-monto" class="form-input" placeholder="0.00" required>
+          </div>
+        </div>
+
+        <div id="modal-idempotency-key" style="font-size: 11px; color: var(--text-secondary); text-align: center; margin-top: 4px;"></div>
+
+        <!-- BANNERS DE LOS 4 ESTADOS DE COMPRA -->
+        <!-- ESTADO PROCESANDO -->
+        <div id="banner-processing" class="status-banner" style="display: none; background: #EBF8FF; color: #2B6CB0; border: 1px solid #BEE3F8;">
+          ⏳ Procesando con GestoPago y debitando cuenta bancaria...
+        </div>
+
+        <!-- ESTADO 2: COMPRA RECHAZADA -->
+        <div id="banner-rejected" class="status-banner rejected" style="display: none;">
+          <div>
+            <strong>❌ Compra Rechazada:</strong>
+            <div id="banner-rejected-msg" style="margin-top: 4px;"></div>
+          </div>
+        </div>
+
+        <!-- ESTADO 3: COMPRA PENDIENTE (REVISIÓN 504) -->
+        <div id="banner-pending" class="status-banner pending" style="display: none; flex-direction: column;">
+          <div>
+            <strong>⏱️ Compra en Revisión / Pendiente:</strong>
+            <div id="banner-pending-msg" style="margin-top: 4px;"></div>
+          </div>
+          <button class="btn-secondary" style="margin-top: 10px; align-self: flex-start; background: white;" onclick="Pago.reconsultarTransaccion()">
+            🔄 Reconsultar Estado en Servidor
+          </button>
+        </div>
+
+        <!-- ESTADO 4: ERROR DE COMUNICACIÓN -->
+        <div id="banner-network-error" class="status-banner error" style="display: none;">
+          <div>
+            <strong>📡 Error de Comunicación:</strong>
+            <div id="banner-network-msg" style="margin-top: 4px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="Pago.cerrarModal()">Cancelar</button>
+        <button id="btn-autorizar-debito" class="btn-primary" style="width: auto; padding: 10px 24px;" onclick="Pago.ejecutarPago()">
+          Autorizar Débito Seguro
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       4. MODAL DE TICKET / COMPROBANTE BANCARIO OFICIAL
+       ========================================================================= -->
+  <div id="modal-ticket" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">✓ Comprobante Oficial de Pago</div>
+        <button class="modal-close" onclick="Pago.cerrarTicket()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div style="text-align: center; margin-bottom: 12px;">
+          <div style="font-size: 42px; color: var(--accent);">✅</div>
+          <h2 style="font-size: 20px; font-weight: 800; color: var(--text-primary);">¡Pago Aplicado con Éxito!</h2>
+          <div class="badge-success" style="margin-top: 6px;">TRANSACCIÓN EXITOSA</div>
+        </div>
+
+        <div class="ticket-box">
+          <div class="ticket-row"><span>SERVICIO:</span><strong id="ticket-servicio">-</strong></div>
+          <div class="ticket-row"><span>PRODUCTO:</span><strong id="ticket-producto">-</strong></div>
+          <div class="ticket-row"><span>REFERENCIA:</span><strong id="ticket-referencia">-</strong></div>
+          <div class="ticket-row"><span>FOLIO GESTOPAGO:</span><strong id="ticket-folio">-</strong></div>
+          <div class="ticket-row"><span>AUTORIZACIÓN:</span><strong id="ticket-auth">-</strong></div>
+          <div class="ticket-row"><span>CUENTA DEBITADA:</span><strong id="ticket-cuenta">-</strong></div>
+          <div class="ticket-divider"></div>
+          <div class="ticket-row"><span>IMPORTE COBRADO:</span><strong id="ticket-monto" style="font-size: 14px; color: var(--accent);">-</strong></div>
+          <div class="ticket-row"><span>SALDO ANTERIOR:</span><span id="ticket-saldo-ant">-</span></div>
+          <div class="ticket-row"><span>SALDO NUEVO:</span><strong id="ticket-saldo-nuevo">-</strong></div>
+          <div class="ticket-divider"></div>
+          <div class="ticket-row"><span>FECHA/HORA:</span><span id="ticket-fecha">-</span></div>
+          <div class="ticket-row"><span>IDEMPOTENCY KEY:</span><span id="ticket-idempotencia" style="font-size: 10px;">-</span></div>
+
+          <div id="ticket-leyenda-box" style="display: none; margin-top: 10px; padding: 8px; background: #EDF2F7; border-radius: 4px; text-align: center;">
+            <span style="font-size: 10px; color: #4A5568;" id="ticket-leyenda-text"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-primary" style="width: 100%;" onclick="Pago.cerrarTicket()">
+          Aceptar y Finalizar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       5. MODAL DE SESIÓN CERRADA / INVALIDADA (HTTP 401 CONTROL SESIÓN ÚNICA)
+       ========================================================================= -->
+  <div id="modal-session-invalidated" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-body" style="text-align: center; padding: 32px 24px;">
+        <div style="font-size: 48px; margin-bottom: 12px; color: var(--danger);">🔒</div>
+        <h2 style="font-size: 20px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px;">
+          Sesión Cerrada en este Dispositivo
+        </h2>
+        <p id="session-invalidated-msg" style="font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.5;">
+          Se ha iniciado sesión desde otro dispositivo (plataforma Móvil) o la sesión ha expirado por seguridad.
+        </p>
+        <button class="btn-primary" style="width: 100%;" onclick="Auth.cerrarModalSesionInvalida()">
+          Entendido, Ir al Login
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPTS DE LA APLICACIÓN -->
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/catalogo.js"></script>
+  <script src="js/pago.js"></script>
+  <script src="js/historial.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

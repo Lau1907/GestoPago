@@ -48,9 +48,87 @@ public class JwtTokenProvider {
         return JWT.create()
                 .withSubject(String.valueOf(usuarioId))
                 .withClaim("correo", correo)
+                .withClaim("dispositivo", "WEB")
+                .withClaim("scope", "ACCESS")
                 .withIssuedAt(now)
                 .withExpiresAt(expiryDate)
                 .sign(algorithm);
+    }
+
+    public String generateToken(Integer usuarioId, String correo, String dispositivo, String sessionId) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + expirationMs);
+
+        var builder = JWT.create()
+                .withSubject(String.valueOf(usuarioId))
+                .withClaim("correo", correo)
+                .withClaim("dispositivo", dispositivo != null ? dispositivo : "WEB")
+                .withClaim("scope", "ACCESS")
+                .withIssuedAt(now)
+                .withExpiresAt(expiryDate);
+
+        if (sessionId != null) {
+            builder.withClaim("sessionId", sessionId);
+        }
+
+        return builder.sign(algorithm);
+    }
+
+    public String generatePreAuthToken(Integer usuarioId, String correo, String dispositivo) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + 300000L); // 5 minutos
+
+        return JWT.create()
+                .withSubject(String.valueOf(usuarioId))
+                .withClaim("correo", correo)
+                .withClaim("dispositivo", dispositivo != null ? dispositivo : "WEB")
+                .withClaim("scope", "PRE_AUTH")
+                .withIssuedAt(now)
+                .withExpiresAt(expiryDate)
+                .sign(algorithm);
+    }
+
+    public DecodedJWT getDecodedJwt(String token) {
+        try {
+            return JWT.require(algorithm)
+                    .build()
+                    .verify(token);
+        } catch (Exception e) {
+            log.debug("Error verificando token JWT: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    public String getSessionIdFromToken(String token) {
+        DecodedJWT jwt = getDecodedJwt(token);
+        if (jwt != null && !jwt.getClaim("sessionId").isMissing() && !jwt.getClaim("sessionId").isNull()) {
+            return jwt.getClaim("sessionId").asString();
+        }
+        return null;
+    }
+
+    public String getDispositivoFromToken(String token) {
+        DecodedJWT jwt = getDecodedJwt(token);
+        if (jwt != null && !jwt.getClaim("dispositivo").isMissing() && !jwt.getClaim("dispositivo").isNull()) {
+            return jwt.getClaim("dispositivo").asString();
+        }
+        return null;
+    }
+
+    public String getScopeFromToken(String token) {
+        DecodedJWT jwt = getDecodedJwt(token);
+        if (jwt != null && !jwt.getClaim("scope").isMissing() && !jwt.getClaim("scope").isNull()) {
+            return jwt.getClaim("scope").asString();
+        }
+        return null;
+    }
+
+    public String getCorreoFromToken(String token) {
+        DecodedJWT jwt = getDecodedJwt(token);
+        if (jwt != null && !jwt.getClaim("correo").isMissing() && !jwt.getClaim("correo").isNull()) {
+            return jwt.getClaim("correo").asString();
+        }
+        return null;
     }
 
     public Integer validateAndGetUsuarioId(String token) {
