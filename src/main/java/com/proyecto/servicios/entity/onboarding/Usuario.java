@@ -35,6 +35,10 @@ public class Usuario {
     @Builder.Default
     private Boolean activo = true;
 
+    @Column(name = "dos_factores_activo", nullable = false)
+    @Builder.Default
+    private Boolean dosFactoresActivo = false;
+
     @Column(name = "fecha_creacion", nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;
 
@@ -50,6 +54,9 @@ public class Usuario {
         this.fechaActualizacion = now;
         if (this.activo == null) {
             this.activo = true;
+        }
+        if (this.dosFactoresActivo == null) {
+            this.dosFactoresActivo = false;
         }
     }
 

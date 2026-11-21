@@ -27,4 +27,12 @@ public interface PagoServicioService {
      * @return Detalle de la transacción registrada
      */
     PagoServicioResponse consultarTransaccion(PagoConsultaRequest request);
+
+    /**
+     * Consulta el historial de transacciones registradas para un cliente o cuenta.
+     *
+     * @param request Filtros opcionales de cliente, cuenta y estatus
+     * @return Lista de transacciones ordenadas descendentemente por fecha
+     */
+    java.util.List<PagoServicioResponse> obtenerHistorial(com.proyecto.servicios.model.gestopago.PagoHistorialRequest request);
 }
