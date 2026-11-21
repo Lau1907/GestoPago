@@ -32,6 +32,7 @@ import java.io.StringReader;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.List;
 
 /**
  * Implementación de la arquitectura de pagos de servicios financieros conectados
@@ -401,6 +402,30 @@ public class PagoServicioServiceImpl implements PagoServicioService {
                     </TRANSACCION>
                 </RESPONSE>
                 """, randomFolio, randomFolio + 777L, referencia);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PagoServicioResponse> obtenerHistorial(PagoHistorialRequest request) {
+        Integer clienteId = request != null ? request.getClienteId() : null;
+        String numeroCuenta = request != null ? request.getNumeroCuenta() : null;
+        boolean soloExitosas = request == null || request.getSoloExitosas() == null || Boolean.TRUE.equals(request.getSoloExitosas());
+
+        List<TransaccionPago> transacciones;
+        if (clienteId != null && clienteId > 0) {
+            transacciones = transaccionPagoRepository.findByClienteIdOrderByFechaCreacionDesc(clienteId);
+        } else if (StringUtils.isNotBlank(numeroCuenta)) {
+            transacciones = transaccionPagoRepository.findByNumeroCuentaOrderByFechaCreacionDesc(numeroCuenta.trim());
+        } else {
+            transacciones = transaccionPagoRepository.findAll(
+                    org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "fechaCreacion")
+            );
+        }
+
+        return transacciones.stream()
+                .filter(tx -> !soloExitosas || tx.getEstatus() == EstadoTransaccion.EXITOSA)
+                .map(this::mapToResponse)
+                .toList();
     }
 
     private String resolverBearerToken() {

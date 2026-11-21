@@ -25,9 +25,14 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
 
+        String mensajePersonalizado = (String) request.getAttribute("SESSION_INVALIDA_MENSAJE");
+        String mensajeFinal = (mensajePersonalizado != null && !mensajePersonalizado.trim().isEmpty())
+                ? mensajePersonalizado
+                : "No autorizado: se requiere un token JWT válido para acceder a este recurso";
+
         GenericResponse genericResponse = GenericResponse.builder()
                 .codigo(HttpStatus.UNAUTHORIZED.value())
-                .mensaje("No autorizado: se requiere un token JWT válido para acceder a este recurso")
+                .mensaje(mensajeFinal)
                 .timestamp(java.time.LocalDateTime.now())
                 .build();
 

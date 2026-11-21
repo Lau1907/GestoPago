@@ -1,0 +1,12 @@
+{
+  "name": "gestopago-web",
+  "version": "1.0.0",
+  "description": "Frontend Web bancario GestoPago para la Unidad II con soporte de Sesión Única y 2FA",
+  "scripts": {
+    "start": "npx serve . -l 3000",
+    "dev": "npx serve . -l 3000"
+  },
+  "keywords": ["gestopago", "banking", "spring-boot", "spa"],
+  "author": "",
+  "license": "ISC"
+}
