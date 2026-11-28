@@ -3,10 +3,12 @@ package com.proyecto.servicios.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.proyecto.servicios.client.GestoPagoPaymentClient;
 import com.proyecto.servicios.client.GestoPagoProductClient;
+import com.proyecto.servicios.entity.gestopago.CatalogoProducto;
 import com.proyecto.servicios.entity.gestopago.GestoPagoToken;
 import com.proyecto.servicios.entity.onboarding.*;
 import com.proyecto.servicios.model.gestopago.PagoConsultaRequest;
 import com.proyecto.servicios.model.gestopago.PagoServicioRequest;
+import com.proyecto.servicios.repositorys.gestopago.CatalogoProductoRepository;
 import com.proyecto.servicios.repositorys.gestopago.TransaccionPagoRepository;
 import com.proyecto.servicios.repositorys.onboarding.ClienteRepository;
 import com.proyecto.servicios.repositorys.onboarding.CuentaRepository;
@@ -24,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -53,6 +56,9 @@ class PagoServicioIntegrationTest {
     @Autowired
     private TransaccionPagoRepository transaccionPagoRepository;
 
+    @Autowired
+    private CatalogoProductoRepository catalogoProductoRepository;
+
     @MockBean
     private GestoPagoTokenService gestoPagoTokenService;
 
@@ -76,21 +82,24 @@ class PagoServicioIntegrationTest {
 
         when(gestoPagoTokenService.obtenerTokenActivo(anyInt(), anyString())).thenReturn(Optional.of(tokenDummy));
 
-        String catalogoXml = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <RESPONSE>
-                    <MENSAJE>
-                        <CODIGO>01</CODIGO>
-                        <TEXTO>Operacion realizada con exito</TEXTO>
-                    </MENSAJE>
-                    <PRODUCTOS>
-                        <producto servicio="AGUAKAN (Cancun)" producto="Agua Cancun" idServicio="56" idProducto="185" idCatTipoServicio="15" tipoFront="2" hasDigitoVerificador="false" precio="10.0" showAyuda="false" tipoReferencia="c">
-                            <legend><![CDATA[Leyenda de comprobante AGUAKAN]]></legend>
-                        </producto>
-                    </PRODUCTOS>
-                </RESPONSE>
-                """;
-        when(gestoPagoProductClient.getProductList(anyString())).thenReturn(catalogoXml);
+        // Pre-cargar catálogo en BD para que obtenerProductos() funcione sin llamar al API
+        if (catalogoProductoRepository.findByIdProducto(185).isEmpty()) {
+            CatalogoProducto prod = new CatalogoProducto();
+            prod.setIdProducto(185);
+            prod.setIdServicio(56);
+            prod.setServicio("AGUAKAN (Cancun)");
+            prod.setNombreProducto("Agua Cancun");
+            prod.setIdCatTipoServicio(15);
+            prod.setTipoFront(2);
+            prod.setHasDigitoVerificador(false);
+            prod.setPrecio("10.0");
+            prod.setShowAyuda(false);
+            prod.setTipoReferencia("c");
+            prod.setLegend("Leyenda de comprobante AGUAKAN");
+            prod.setUrlLogo("/gestopago/logo/185");
+            prod.setFechaActualizacion(LocalDateTime.now());
+            catalogoProductoRepository.save(prod);
+        }
 
         // Crear cliente y cuenta de prueba con saldo de 200.00
         clienteTest = clienteRepository.findByCurp("HEGG560427MVZRRL99").orElseGet(() -> {
@@ -220,6 +229,62 @@ class PagoServicioIntegrationTest {
                 .andExpect(jsonPath("$.codigo").value(400));
 
         // El saldo en base de datos debe permanecer inalterado
+        Cuenta cuentaActual = cuentaRepository.findByNumeroCuenta(cuentaTest.getNumeroCuenta()).orElseThrow();
+        assertEquals(0, new BigDecimal("200.00").compareTo(cuentaActual.getSaldo()));
+    }
+
+    @Test
+    @DisplayName("Flujo End-to-End: Rechazo de GestoPago (codigo != 01, autorizacion -1) retorna comprobante FALLIDA sin debitar saldo")
+    void flujoCompleto_RechazoGestoPago_RetornaComprobanteFallidaSinDebitar() throws Exception {
+        String xmlTxRechazada = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <RESPONSE>
+                    <MENSAJE>
+                        <CODIGO>02</CODIGO>
+                        <TEXTO>Rechazado por el operador</TEXTO>
+                    </MENSAJE>
+                    <TRANSACCION>
+                        <ID_TRANSACCION>998877</ID_TRANSACCION>
+                        <FOLIO>GP-REJ-20261027</FOLIO>
+                        <AUTORIZACION>-1</AUTORIZACION>
+                        <FECHA>2026-10-27 17:20:00</FECHA>
+                        <MONTO>10.00</MONTO>
+                        <TICKET>Transaccion rechazada</TICKET>
+                    </TRANSACCION>
+                </RESPONSE>
+                """;
+
+        when(gestoPagoPaymentClient.sendTx(anyString(), eq(185), eq("10.00"), eq("CONTRATO-RECH"), any(), any(), any()))
+                .thenReturn(xmlTxRechazada);
+
+        PagoServicioRequest request = PagoServicioRequest.builder()
+                .clienteId(clienteTest.getId())
+                .numeroCuenta(cuentaTest.getNumeroCuenta())
+                .idProducto(185)
+                .monto(new BigDecimal("10.00"))
+                .referencia("CONTRATO-RECH")
+                .idempotencyKey("IDEMP-INTEGRATION-RECH-001")
+                .build();
+
+        mockMvc.perform(post("/pagos/servicio")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("FALLIDA"))
+                .andExpect(jsonPath("$.codigoGestoPago").value("02"))
+                .andExpect(jsonPath("$.mensajeGestoPago").value("Rechazado por el operador"))
+                .andExpect(jsonPath("$.autorizacionGestoPago").value("-1"))
+                .andExpect(jsonPath("$.idTransaccionProveedor").value("998877"))
+                .andExpect(jsonPath("$.folioGestoPago").value("GP-REJ-20261027"))
+                .andExpect(jsonPath("$.servicio").value("AGUAKAN (Cancun)"))
+                .andExpect(jsonPath("$.producto").value("Agua Cancun (Mun. de Benito Juarez y de Isla Mujeres)"))
+                .andExpect(jsonPath("$.referencia").value("CONTRATO-RECH"))
+                .andExpect(jsonPath("$.numeroCuenta").value(cuentaTest.getNumeroCuenta()))
+                .andExpect(jsonPath("$.monto").value(10.00))
+                .andExpect(jsonPath("$.saldoAnterior").value(200.00))
+                .andExpect(jsonPath("$.saldoNuevo").doesNotExist());
+
+        // El saldo en base de datos debe permanecer intacto en 200.00
         Cuenta cuentaActual = cuentaRepository.findByNumeroCuenta(cuentaTest.getNumeroCuenta()).orElseThrow();
         assertEquals(0, new BigDecimal("200.00").compareTo(cuentaActual.getSaldo()));
     }

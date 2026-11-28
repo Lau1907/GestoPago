@@ -59,34 +59,48 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
     final catalogoProvider = context.watch<CatalogoProvider>();
 
     return Scaffold(
+      backgroundColor: AppTheme.surface,
       body: RefreshIndicator(
+        color: AppTheme.primary,
+        backgroundColor: AppTheme.cardBg,
         onRefresh: () => catalogoProvider.cargarProductos(),
         child: Column(
           children: [
-            // Barra de búsqueda
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            // ── Buscador oscuro ──────────────────────────────────────────────
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              decoration: BoxDecoration(
+                color: AppTheme.cardBg,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppTheme.borderColor),
+              ),
               child: TextField(
                 controller: _searchController,
                 onChanged: catalogoProvider.filtrarPorTexto,
+                style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
                 decoration: InputDecoration(
-                  hintText: 'Buscar servicios o productos...',
-                  prefixIcon: const Icon(Icons.search, size: 20),
+                  hintText: 'Buscar por servicio (Agua, Luz, Gas, Teléfono)...',
+                  hintStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                  prefixIcon: const Icon(Icons.search, size: 20, color: AppTheme.textSecondary),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.clear, size: 18),
+                          icon: const Icon(Icons.clear, size: 18, color: AppTheme.textSecondary),
                           onPressed: () {
                             _searchController.clear();
                             catalogoProvider.filtrarPorTexto('');
                           },
                         )
                       : null,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  filled: false,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
                 ),
               ),
             ),
 
-            // Chips horizontales de categorías / servicios
+            // ── Chips de categorías ──────────────────────────────────────────
             if (catalogoProvider.categoriasDisponibles.isNotEmpty)
               SizedBox(
                 height: 44,
@@ -117,16 +131,17 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
 
             const SizedBox(height: 8),
 
-            // Lista de productos o estados de carga/error
+            // ── Lista de productos ───────────────────────────────────────────
             Expanded(
               child: Builder(
                 builder: (context) {
                   if (catalogoProvider.isLoading && catalogoProvider.productos.isEmpty) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const Center(
+                      child: CircularProgressIndicator(color: AppTheme.primary),
+                    );
                   }
 
-                  if (catalogoProvider.errorMessage != null &&
-                      catalogoProvider.productos.isEmpty) {
+                  if (catalogoProvider.errorMessage != null && catalogoProvider.productos.isEmpty) {
                     return EmptyStateView(
                       icon: Icons.cloud_off_outlined,
                       title: 'Error al consultar catálogo',
@@ -146,32 +161,53 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
 
                   return ListView.builder(
                     itemCount: catalogoProvider.productos.length,
-                    padding: const EdgeInsets.only(bottom: 24),
+                    padding: const EdgeInsets.only(bottom: 24, top: 4),
                     itemBuilder: (context, index) {
                       final item = catalogoProvider.productos[index];
                       final iconData = _obtenerIconoServicio(item.servicio);
 
-                      return Card(
+                      return Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: AppTheme.cardBg,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppTheme.borderColor),
+                        ),
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(14),
                           onTap: () => _abrirModalCompra(item),
                           child: Padding(
-                            padding: const EdgeInsets.all(16.0),
+                            padding: const EdgeInsets.all(16),
                             child: Row(
                               children: [
-                                // Icono representativo
+                                // Ícono del servicio (logo de red o ícono fallback)
                                 Container(
                                   width: 48,
                                   height: 48,
                                   decoration: BoxDecoration(
-                                    color: AppTheme.primary.withValues(alpha: 0.08),
+                                    color: AppTheme.primary.withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: AppTheme.primary.withValues(alpha: 0.25),
+                                    ),
                                   ),
-                                  child: Icon(iconData, color: AppTheme.primary, size: 26),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(11),
+                                    child: item.urlLogo != null
+                                        ? Image.network(
+                                            item.urlLogo!,
+                                            width: 48,
+                                            height: 48,
+                                            fit: BoxFit.contain,
+                                            errorBuilder: (_, __, ___) =>
+                                                Icon(iconData, color: AppTheme.primaryLight, size: 26),
+                                          )
+                                        : Icon(iconData, color: AppTheme.primaryLight, size: 26),
+                                  ),
                                 ),
                                 const SizedBox(width: 14),
 
-                                // Detalle del producto
+                                // Info del producto
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,7 +215,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                                       Text(
                                         item.producto,
                                         style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
+                                          fontWeight: FontWeight.w700,
                                           fontSize: 15,
                                           color: AppTheme.textPrimary,
                                         ),
@@ -193,14 +229,14 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                                         ),
                                       ),
                                       if (item.legend != null && item.legend!.isNotEmpty) ...[
-                                        const SizedBox(height: 4),
+                                        const SizedBox(height: 3),
                                         Text(
                                           item.legend!,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
+                                          style: const TextStyle(
                                             fontSize: 11,
-                                            color: Colors.grey.shade600,
+                                            color: AppTheme.textMuted,
                                           ),
                                         ),
                                       ],
@@ -208,9 +244,9 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                                   ),
                                 ),
 
-                                const SizedBox(width: 8),
+                                const SizedBox(width: 10),
 
-                                // Precio y acción
+                                // Precio y botón Pagar
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
@@ -219,21 +255,20 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                                           ? Formatters.formatCurrency(item.precioFijoValor)
                                           : 'Monto libre',
                                       style: TextStyle(
-                                        fontWeight: FontWeight.w700,
+                                        fontWeight: FontWeight.w800,
                                         fontSize: 14,
                                         color: item.tienePrecioFijo
                                             ? AppTheme.accent
-                                            : AppTheme.primary,
+                                            : AppTheme.primaryLight,
                                       ),
                                     ),
-                                    const SizedBox(height: 6),
+                                    const SizedBox(height: 8),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 4,
-                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                                       decoration: BoxDecoration(
-                                        color: AppTheme.primary,
+                                        gradient: const LinearGradient(
+                                          colors: [AppTheme.primary, AppTheme.primaryHover],
+                                        ),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: const Text(
@@ -241,7 +276,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                                         style: TextStyle(
                                           color: Colors.white,
                                           fontSize: 12,
-                                          fontWeight: FontWeight.w600,
+                                          fontWeight: FontWeight.w700,
                                         ),
                                       ),
                                     ),

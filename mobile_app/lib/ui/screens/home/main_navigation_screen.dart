@@ -29,44 +29,71 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final cuenta = authProvider.cuentaSeleccionada;
 
     return Scaffold(
+      backgroundColor: AppTheme.surface,
       body: Column(
         children: [
-          // Barra de cabecera con información bancaria adaptable
+          // ── AppBar superior oscuro con info bancaria ──────────────────────
           Container(
-            color: AppTheme.primary,
+            color: AppTheme.headerBg,
             padding: EdgeInsets.only(
               top: MediaQuery.of(context).padding.top + 8,
               left: 16,
               right: 16,
               bottom: 12,
             ),
+            decoration: const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: AppTheme.borderColor, width: 1),
+              ),
+            ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Columna de información del titular y cuenta (adaptable)
+                // Logo bancario
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppTheme.primary, AppTheme.primaryHover],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primary.withValues(alpha: 0.35),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.account_balance, size: 20, color: Colors.white),
+                ),
+                const SizedBox(width: 10),
+
+                // Nombre y cuenta (adaptable)
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        authProvider.cliente?.nombreCompleto ?? 'Cliente Titular',
+                        authProvider.cliente?.nombreCompleto ?? 'Banca Digital',
                         style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 2),
                       Text(
                         cuenta != null
                             ? 'Cuenta: ${Formatters.maskAccount(cuenta.numeroCuenta)}'
-                            : 'Cargando cuenta...',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.8),
-                          fontSize: 12,
+                            : 'Canal MOBILE Seguro',
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 11,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -74,33 +101,36 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                // Contenedor de saldo disponible
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'Saldo Disponible',
-                        style: TextStyle(color: Colors.white70, fontSize: 10),
-                      ),
-                      Text(
-                        cuenta != null ? Formatters.formatCurrency(cuenta.saldo) : '\$0.00',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
+                const SizedBox(width: 10),
+
+                // Badge de saldo
+                if (cuenta != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppTheme.cardBg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppTheme.borderColor),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Saldo',
+                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 10),
                         ),
-                      ),
-                    ],
+                        Text(
+                          Formatters.formatCurrency(cuenta.saldo),
+                          style: const TextStyle(
+                            color: AppTheme.accent,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -109,11 +139,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+        onDestinationSelected: (index) => setState(() => _currentIndex = index),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.storefront_outlined),

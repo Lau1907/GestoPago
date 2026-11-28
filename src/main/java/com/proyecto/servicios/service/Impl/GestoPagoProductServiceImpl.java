@@ -1,9 +1,13 @@
 package com.proyecto.servicios.service.Impl;
 
 import com.proyecto.servicios.client.GestoPagoProductClient;
+import com.proyecto.servicios.entity.gestopago.CatalogoProducto;
 import com.proyecto.servicios.entity.gestopago.GestoPagoToken;
 import com.proyecto.servicios.exception.ExternalIntegrationException;
+import com.proyecto.servicios.model.gestopago.GestoPagoMensajeResponse;
 import com.proyecto.servicios.model.gestopago.GestoPagoProductListResponse;
+import com.proyecto.servicios.model.gestopago.GestoPagoProductoItem;
+import com.proyecto.servicios.repositorys.gestopago.CatalogoProductoRepository;
 import com.proyecto.servicios.service.GestoPagoProductService;
 import com.proyecto.servicios.service.GestoPagoTokenService;
 import feign.FeignException;
@@ -16,17 +20,23 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import java.io.StringReader;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Service
 @Slf4j
 public class GestoPagoProductServiceImpl implements GestoPagoProductService {
 
+    public static final String GESTOPAGO_LOGO_BASE_URL = "https://gestopago.portalventas.net";
+    private static final String RELATIVE_LOGO_PREFIX = "/gestopago/logo/";
     private static final JAXBContext JAXB_CONTEXT;
 
     static {
@@ -37,6 +47,7 @@ public class GestoPagoProductServiceImpl implements GestoPagoProductService {
         }
     }
 
+    private final CatalogoProductoRepository catalogoProductoRepository;
     private final GestoPagoProductClient gestoPagoProductClient;
     private final GestoPagoTokenService gestoPagoTokenService;
 
@@ -49,21 +60,46 @@ public class GestoPagoProductServiceImpl implements GestoPagoProductService {
     @Value("${gestopago.auth.bearer-token:}")
     private String fallbackBearerToken;
 
-    @Value("${gestopago.auth.password:}")
-    private String password;
-
-    @Value("${gestopago.mock.enabled:false}")
-    private boolean mockEnabled;
-
-    public GestoPagoProductServiceImpl(GestoPagoProductClient gestoPagoProductClient,
+    public GestoPagoProductServiceImpl(CatalogoProductoRepository catalogoProductoRepository,
+                                        GestoPagoProductClient gestoPagoProductClient,
                                         GestoPagoTokenService gestoPagoTokenService) {
+        this.catalogoProductoRepository = catalogoProductoRepository;
         this.gestoPagoProductClient = gestoPagoProductClient;
         this.gestoPagoTokenService = gestoPagoTokenService;
     }
 
     @Override
+    @Transactional(readOnly = true)
     public GestoPagoProductListResponse obtenerProductos() {
-        log.info("Iniciando consumo del servicio externo GET /sistema/service/getProductList.do");
+        List<CatalogoProducto> entidades = catalogoProductoRepository.findAllByOrderByServicioAscNombreProductoAsc();
+        List<GestoPagoProductoItem> items = entidades.stream()
+                .map(this::mapToItem)
+                .toList();
+
+        return GestoPagoProductListResponse.builder()
+                .mensaje(GestoPagoMensajeResponse.builder()
+                        .codigo("01")
+                        .texto("Catálogo obtenido desde base de datos")
+                        .build())
+                .productos(items)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public GestoPagoProductListResponse sincronizarCatalogoDesdeGestoPago() {
+        Optional<CatalogoProducto> ultimaSync = catalogoProductoRepository
+                .findTopByFechaActualizacionIsNotNullOrderByFechaActualizacionDesc();
+
+        if (ultimaSync.isPresent()
+                && ultimaSync.get().getFechaActualizacion() != null
+                && ultimaSync.get().getFechaActualizacion().isAfter(LocalDateTime.now().minusHours(24))) {
+            log.info("Sincronización omitida: el catálogo ya fue actualizado desde GestoPago hace menos de 24 horas ({}).",
+                    ultimaSync.get().getFechaActualizacion());
+            return obtenerProductos();
+        }
+
+        log.info("Iniciando sincronización oficial GET /sistema/service/getProductList.do");
         long startTime = System.currentTimeMillis();
         String token = resolverBearerToken();
         String authorizationHeader = token.startsWith("Bearer ") ? token : "Bearer " + token;
@@ -76,7 +112,74 @@ public class GestoPagoProductServiceImpl implements GestoPagoProductService {
             log.info("Fin de la invocación al servicio externo GestoPago en {} ms", duration);
         }
 
-        return unmarshalXml(responseXml);
+        GestoPagoProductListResponse apiResponse = unmarshalXml(responseXml);
+        if (apiResponse.getProductos() != null && !apiResponse.getProductos().isEmpty()) {
+            LocalDateTime ahora = LocalDateTime.now();
+            List<CatalogoProducto> actualizados = new ArrayList<>(apiResponse.getProductos().size());
+
+            for (GestoPagoProductoItem item : apiResponse.getProductos()) {
+                if (item.getIdProducto() == null || item.getIdServicio() == null) {
+                    continue;
+                }
+                CatalogoProducto entidad = catalogoProductoRepository.findByIdProducto(item.getIdProducto())
+                        .orElseGet(CatalogoProducto::new);
+
+                entidad.setIdProducto(item.getIdProducto());
+                entidad.setIdServicio(item.getIdServicio());
+                entidad.setServicio(StringUtils.defaultIfBlank(item.getServicio(), "Servicio"));
+                entidad.setNombreProducto(StringUtils.defaultIfBlank(item.getProducto(), "Producto"));
+                entidad.setIdCatTipoServicio(item.getIdCatTipoServicio());
+                entidad.setTipoFront(item.getTipoFront());
+                entidad.setHasDigitoVerificador(Boolean.TRUE.equals(item.getHasDigitoVerificador()));
+                entidad.setPrecio(item.getPrecio());
+                entidad.setShowAyuda(Boolean.TRUE.equals(item.getShowAyuda()));
+                entidad.setTipoReferencia(item.getTipoReferencia());
+                entidad.setLegend(item.getLegend());
+                if (StringUtils.isNotBlank(item.getUrlLogo())) {
+                    entidad.setUrlLogo(item.getUrlLogo().trim());
+                } else if (StringUtils.isBlank(entidad.getUrlLogo())) {
+                    entidad.setUrlLogo(RELATIVE_LOGO_PREFIX + item.getIdServicio());
+                }
+                entidad.setFechaActualizacion(ahora);
+                actualizados.add(entidad);
+            }
+
+            catalogoProductoRepository.saveAll(actualizados);
+            log.info("Catálogo sincronizado desde GestoPago: {} productos actualizados.", actualizados.size());
+        }
+
+        return obtenerProductos();
+    }
+
+    public static String normalizarUrlLogo(String urlLogo) {
+        if (StringUtils.isBlank(urlLogo)) {
+            return null;
+        }
+        String trimmed = urlLogo.trim();
+        if (trimmed.startsWith(RELATIVE_LOGO_PREFIX)) {
+            return GESTOPAGO_LOGO_BASE_URL + trimmed;
+        }
+        if (trimmed.startsWith("/")) {
+            return GESTOPAGO_LOGO_BASE_URL + trimmed;
+        }
+        return trimmed;
+    }
+
+    private GestoPagoProductoItem mapToItem(CatalogoProducto entity) {
+        return GestoPagoProductoItem.builder()
+                .servicio(entity.getServicio())
+                .producto(entity.getNombreProducto())
+                .idServicio(entity.getIdServicio())
+                .idProducto(entity.getIdProducto())
+                .idCatTipoServicio(entity.getIdCatTipoServicio())
+                .tipoFront(entity.getTipoFront())
+                .hasDigitoVerificador(Boolean.TRUE.equals(entity.getHasDigitoVerificador()))
+                .precio(entity.getPrecio())
+                .showAyuda(Boolean.TRUE.equals(entity.getShowAyuda()))
+                .tipoReferencia(entity.getTipoReferencia())
+                .legend(entity.getLegend())
+                .urlLogo(normalizarUrlLogo(entity.getUrlLogo()))
+                .build();
     }
 
     private String invocarServicioExterno(String authorizationHeader) {
@@ -85,39 +188,19 @@ public class GestoPagoProductServiceImpl implements GestoPagoProductService {
             log.info("Respuesta obtenida exitosamente del servicio externo GestoPago");
             return responseXml;
         } catch (RetryableException e) {
-            if (mockEnabled) {
-                log.warn("Timeout al consumir servicio GestoPago. Modo Mock activo: interceptando y retornando catálogo simulado");
-                return generarXmlCatalogoSimulado();
-            }
             log.error("Timeout al consumir el servicio externo GestoPago: {}", e.getMessage());
             throw new ExternalIntegrationException("Tiempo de espera agotado con el servicio externo", HttpStatus.GATEWAY_TIMEOUT, e);
         } catch (FeignException.Forbidden e) {
-            if (mockEnabled) {
-                log.warn("Error 403 Forbidden en GestoPago. Modo Mock activo: interceptando y retornando catálogo simulado");
-                return generarXmlCatalogoSimulado();
-            }
             log.error("Error 403 Forbidden al consumir el servicio externo GestoPago: Token expirado o no autorizado");
             throw new ExternalIntegrationException("El Bearer Token ha expirado o no es válido", HttpStatus.FORBIDDEN, e);
         } catch (FeignException.Unauthorized e) {
-            if (mockEnabled) {
-                log.warn("Error 401 Unauthorized en GestoPago. Modo Mock activo: interceptando y retornando catálogo simulado");
-                return generarXmlCatalogoSimulado();
-            }
             log.error("Error 401 Unauthorized al consumir el servicio externo GestoPago");
             throw new ExternalIntegrationException("Autenticación no válida en el servicio externo", HttpStatus.UNAUTHORIZED, e);
         } catch (FeignException e) {
-            if (mockEnabled) {
-                log.warn("Error Feign ({}) en GestoPago. Modo Mock activo: interceptando y retornando catálogo simulado", e.status());
-                return generarXmlCatalogoSimulado();
-            }
             log.error("Error en comunicación con GestoPago (Status {}): {}", e.status(), e.getMessage());
             HttpStatus status = HttpStatus.resolve(e.status()) != null ? HttpStatus.resolve(e.status()) : HttpStatus.BAD_GATEWAY;
             throw new ExternalIntegrationException("Error de comunicación con el servicio externo GestoPago", status, e);
         } catch (Exception e) {
-            if (mockEnabled) {
-                log.warn("Error de conexión con GestoPago: {}. Modo Mock activo: retornando catálogo simulado", e.getMessage());
-                return generarXmlCatalogoSimulado();
-            }
             log.error("Error inesperado de red o cliente al invocar GestoPago: {}", e.getMessage());
             throw new ExternalIntegrationException("Fallo inesperado al conectar con el servicio externo", HttpStatus.INTERNAL_SERVER_ERROR, e);
         }
@@ -135,11 +218,6 @@ public class GestoPagoProductServiceImpl implements GestoPagoProductService {
             return fallbackBearerToken;
         }
 
-        if (mockEnabled) {
-            log.info("Modo Mock activo: utilizando token simulado para consulta de productos");
-            return "mock-gestopago-jwt-token-distribuidor-" + idDistribuidor;
-        }
-
         log.info("No se encontró token activo en BD ni propiedad. Intentando renovación de token...");
         try {
             gestoPagoTokenService.renovarToken();
@@ -151,31 +229,7 @@ public class GestoPagoProductServiceImpl implements GestoPagoProductService {
             log.error("Error al intentar renovar token de GestoPago: {}", e.getMessage());
         }
 
-        if (mockEnabled) {
-            return "mock-gestopago-jwt-token-distribuidor-" + idDistribuidor;
-        }
-
         throw new ExternalIntegrationException("No se dispone de un Bearer Token válido para autenticación", HttpStatus.UNAUTHORIZED);
-    }
-
-    private String generarXmlCatalogoSimulado() {
-        return """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <RESPONSE>
-                    <MENSAJE>
-                        <CODIGO>01</CODIGO>
-                        <TEXTO>Operacion realizada con exito (Catalogo Simulado)</TEXTO>
-                    </MENSAJE>
-                    <PRODUCTOS>
-                        <producto servicio="CFE" producto="CFE SUMINISTRADOR DE SERVICIOS BASICOS" idServicio="1" idProducto="1" idCatTipoServicio="1" tipoFront="1" hasDigitoVerificador="false" precio="VARIABLE" showAyuda="false" tipoReferencia="Servicio">
-                            <legend><![CDATA[Comprobante de pago CFE]]></legend>
-                        </producto>
-                        <producto servicio="AGUAKAN (Cancun)" producto="Agua Cancun" idServicio="56" idProducto="185" idCatTipoServicio="15" tipoFront="2" hasDigitoVerificador="false" precio="10.0" showAyuda="false" tipoReferencia="c">
-                            <legend><![CDATA[Leyenda de comprobante de pago AGUAKAN]]></legend>
-                        </producto>
-                    </PRODUCTOS>
-                </RESPONSE>
-                """;
     }
 
     private GestoPagoProductListResponse unmarshalXml(String xmlContent) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
 
+/// Badge de estado con paleta oscura fintech
 class StatusBadge extends StatelessWidget {
   final String estado;
 
@@ -10,32 +11,36 @@ class StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     Color bg;
     Color fg;
+    Color borderCol;
     IconData icon;
     String label = estado;
 
     switch (estado.toUpperCase()) {
       case 'EXITOSA':
       case 'APROBADA':
-        bg = AppTheme.accent.withValues(alpha: 0.12);
-        fg = AppTheme.accent;
+        bg = AppTheme.accentLight;
+        fg = const Color(0xFF34D399);
+        borderCol = const Color(0x5910B981);
         icon = Icons.check_circle_outline;
-        label = 'Exitosa';
+        label = 'EXITOSA';
         break;
       case 'TIMEOUT_REVISION':
       case 'INICIADA':
       case 'PENDIENTE':
-        bg = AppTheme.warning.withValues(alpha: 0.12);
-        fg = AppTheme.warning;
+        bg = AppTheme.warningLight;
+        fg = const Color(0xFFFCD34D);
+        borderCol = const Color(0x59F59E0B);
         icon = Icons.access_time;
-        label = 'En Revisión';
+        label = 'EN REVISIÓN';
         break;
       case 'FALLIDA':
       case 'RECHAZADA':
       default:
-        bg = AppTheme.danger.withValues(alpha: 0.12);
-        fg = AppTheme.danger;
+        bg = AppTheme.dangerLight;
+        fg = const Color(0xFFF87171);
+        borderCol = const Color(0x59EF4444);
         icon = Icons.cancel_outlined;
-        label = 'Rechazada';
+        label = 'RECHAZADA';
         break;
     }
 
@@ -44,18 +49,20 @@ class StatusBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderCol, width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: fg),
-          const SizedBox(width: 4),
+          Icon(icon, size: 13, color: fg),
+          const SizedBox(width: 5),
           Text(
             label,
             style: TextStyle(
               color: fg,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.4,
             ),
           ),
         ],

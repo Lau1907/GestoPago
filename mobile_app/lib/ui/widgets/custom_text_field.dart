@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../config/app_theme.dart';
 
+/// Campo de texto oscuro unificado con la identidad fintech
 class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
@@ -35,10 +37,13 @@ class CustomTextField extends StatelessWidget {
       validator: validator,
       enabled: enabled,
       maxLines: maxLines,
+      style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: 20) : null,
+        prefixIcon: prefixIcon != null
+            ? Icon(prefixIcon, size: 20, color: AppTheme.textSecondary)
+            : null,
         suffixIcon: suffixIcon,
       ),
     );

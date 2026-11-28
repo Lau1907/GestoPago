@@ -8,6 +8,7 @@ import com.proyecto.servicios.entity.onboarding.Cuenta;
 import com.proyecto.servicios.entity.onboarding.EstatusCuenta;
 import com.proyecto.servicios.exception.*;
 import com.proyecto.servicios.model.gestopago.*;
+import com.proyecto.servicios.repositorys.gestopago.CatalogoProductoRepository;
 import com.proyecto.servicios.repositorys.gestopago.TransaccionPagoRepository;
 import com.proyecto.servicios.repositorys.onboarding.CuentaRepository;
 import com.proyecto.servicios.service.GestoPagoProductService;
@@ -21,6 +22,7 @@ import jakarta.xml.bind.Unmarshaller;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,22 +33,9 @@ import javax.xml.stream.XMLStreamReader;
 import java.io.StringReader;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.List;
+import java.util.Optional;
 
-/**
- * Implementación de la arquitectura de pagos de servicios financieros conectados
- * a la API externa de GestoPago (POST /sistema/service/sendTx.do).
- *
- * <p>Esta clase implementa:
- * <ul>
- *   <li>Bloqueo pesimista para concurrencia segura en saldos bancarios ({@code SELECT FOR UPDATE}).</li>
- *   <li>Prevención de transacciones duplicadas mediante clave de idempotencia estricta.</li>
- *   <li>Manejo robusto de la incertidumbre por timeouts (HTTP 504 / RetryableException) evitando falsos negativos.</li>
- *   <li>Gestión segura de credenciales y Bearer Tokens de GestoPago.</li>
- *   <li>Traducción limpia de errores Feign sin exponer trazas técnicas al cliente.</li>
- * </ul>
- */
 @Service
 @Slf4j
 public class PagoServicioServiceImpl implements PagoServicioService {
@@ -66,6 +55,7 @@ public class PagoServicioServiceImpl implements PagoServicioService {
     private final GestoPagoProductService gestoPagoProductService;
     private final GestoPagoPaymentClient gestoPagoPaymentClient;
     private final GestoPagoTokenService gestoPagoTokenService;
+    private final CatalogoProductoRepository catalogoProductoRepository;
 
     @Value("${gestopago.auth.id-distribuidor:83}")
     private Integer idDistribuidor;
@@ -80,15 +70,17 @@ public class PagoServicioServiceImpl implements PagoServicioService {
     private String password;
 
     public PagoServicioServiceImpl(CuentaRepository cuentaRepository,
-                                  TransaccionPagoRepository transaccionPagoRepository,
-                                  GestoPagoProductService gestoPagoProductService,
-                                  GestoPagoPaymentClient gestoPagoPaymentClient,
-                                  GestoPagoTokenService gestoPagoTokenService) {
+            TransaccionPagoRepository transaccionPagoRepository,
+            GestoPagoProductService gestoPagoProductService,
+            GestoPagoPaymentClient gestoPagoPaymentClient,
+            GestoPagoTokenService gestoPagoTokenService,
+            CatalogoProductoRepository catalogoProductoRepository) {
         this.cuentaRepository = cuentaRepository;
         this.transaccionPagoRepository = transaccionPagoRepository;
         this.gestoPagoProductService = gestoPagoProductService;
         this.gestoPagoPaymentClient = gestoPagoPaymentClient;
         this.gestoPagoTokenService = gestoPagoTokenService;
+        this.catalogoProductoRepository = catalogoProductoRepository;
     }
 
     @Override
@@ -98,12 +90,14 @@ public class PagoServicioServiceImpl implements PagoServicioService {
                 request.getIdempotencyKey(), request.getNumeroCuenta(), request.getIdProducto(), request.getMonto());
 
         // 1. Control de Idempotencia: Verificar si la clave ya fue registrada
-        Optional<TransaccionPago> txExistenteOpt = transaccionPagoRepository.findByIdempotencyKey(request.getIdempotencyKey());
+        Optional<TransaccionPago> txExistenteOpt = transaccionPagoRepository
+                .findByIdempotencyKey(request.getIdempotencyKey());
         if (txExistenteOpt.isPresent()) {
             TransaccionPago txExistente = txExistenteOpt.get();
-            if (txExistente.getEstatus() == EstadoTransaccion.EXITOSA) {
-                log.info("Transacción ya completada exitosamente con anterioridad. Retornando respuesta idempotente para clave={}",
-                        request.getIdempotencyKey());
+            if (txExistente.getEstatus() == EstadoTransaccion.EXITOSA
+                    || txExistente.getEstatus() == EstadoTransaccion.FALLIDA) {
+                log.info("Transacción ya finalizada (estatus={}). Retornando respuesta idempotente para clave={}",
+                        txExistente.getEstatus(), request.getIdempotencyKey());
                 return mapToResponse(txExistente);
             }
             if (txExistente.getEstatus() == EstadoTransaccion.TIMEOUT_REVISION) {
@@ -112,38 +106,36 @@ public class PagoServicioServiceImpl implements PagoServicioService {
                 throw new TransaccionDuplicadaException(request.getIdempotencyKey());
             }
             if (txExistente.getEstatus() == EstadoTransaccion.INICIADA) {
-                log.warn("Solicitud duplicada: la transacción se encuentra actualmente en procesamiento. IdempotencyKey={}",
+                log.warn(
+                        "Solicitud duplicada: la transacción se encuentra actualmente en procesamiento. IdempotencyKey={}",
                         request.getIdempotencyKey());
                 throw new TransaccionDuplicadaException(request.getIdempotencyKey());
             }
         }
 
-        // 2. Concurrencia y Consistencia: Bloqueo Pesimista (PESSIMISTIC_WRITE) sobre la cuenta bancaria
+        // 2. Concurrencia y Consistencia: Bloqueo Pesimista (PESSIMISTIC_WRITE) sobre
+        // la cuenta bancaria
         Cuenta cuenta = cuentaRepository.findByNumeroCuentaForUpdate(request.getNumeroCuenta())
                 .orElseThrow(() -> new CuentaNoEncontradaException(request.getNumeroCuenta()));
 
         // 3. Validaciones de Negocio Previas
-        // A) Validar pertenencia de la cuenta al cliente
         if (cuenta.getCliente() == null || !cuenta.getCliente().getId().equals(request.getClienteId())) {
             log.error("Violación de seguridad: La cuenta '{}' no pertenece al cliente ID {}",
                     request.getNumeroCuenta(), request.getClienteId());
             throw new CuentaNoPerteneceAlClienteException(request.getNumeroCuenta(), request.getClienteId());
         }
 
-        // B) Validar estatus del cliente
         if (!Boolean.TRUE.equals(cuenta.getCliente().getActivo())) {
             log.warn("El cliente ID {} se encuentra inactivo", request.getClienteId());
             throw new ClienteInactivoException("El cliente titular de la cuenta no se encuentra activo en el sistema");
         }
 
-        // C) Validar estatus de la cuenta bancaria ('A' Activa)
         if (cuenta.getEstatus() != EstatusCuenta.ACTIVA) {
             log.warn("La cuenta bancaria '{}' no está activa (Estatus: {})",
                     request.getNumeroCuenta(), cuenta.getEstatus());
             throw new CuentaInactivaException(request.getNumeroCuenta());
         }
 
-        // D) Validar que el saldo de la cuenta sea estrictamente mayor o igual al monto a pagar
         if (cuenta.getSaldo().compareTo(request.getMonto()) < 0) {
             log.warn("Saldo insuficiente en cuenta '{}'. Saldo actual: {}, Monto requerido: {}",
                     request.getNumeroCuenta(), cuenta.getSaldo(), request.getMonto());
@@ -157,13 +149,13 @@ public class PagoServicioServiceImpl implements PagoServicioService {
                 .findFirst()
                 .orElseThrow(() -> new ProductoNoEncontradoException(request.getIdProducto()));
 
-        // Validación de precio fijo si aplica
         validarReglasPrecio(productoCatalogo, request.getMonto());
 
-        // Validación de dígito verificador si el producto lo requiere
-        if (Boolean.TRUE.equals(productoCatalogo.getHasDigitoVerificador()) && StringUtils.isBlank(request.getDigitoVerificador())) {
+        if (Boolean.TRUE.equals(productoCatalogo.getHasDigitoVerificador())
+                && StringUtils.isBlank(request.getDigitoVerificador())) {
             throw new ErrorValidacionException(String.format(
-                    "El producto '%s' requiere obligatoriamente un dígito verificador", productoCatalogo.getProducto()));
+                    "El producto '%s' requiere obligatoriamente un dígito verificador",
+                    productoCatalogo.getProducto()));
         }
 
         // 5. Registro Inicial de la Transacción en estado INICIADA (Auditoría)
@@ -188,7 +180,8 @@ public class PagoServicioServiceImpl implements PagoServicioService {
 
         transaccion = transaccionPagoRepository.save(transaccion);
 
-        // 6. Invocación al Servicio Externo de GestoPago (POST /sistema/service/sendTx.do)
+        // 6. Invocación al Servicio Externo de GestoPago (POST
+        // /sistema/service/sendTx.do)
         String token = resolverBearerToken();
         String authorizationHeader = token.startsWith("Bearer ") ? token : "Bearer " + token;
 
@@ -201,17 +194,8 @@ public class PagoServicioServiceImpl implements PagoServicioService {
                     request.getReferencia(),
                     request.getDigitoVerificador(),
                     productoCatalogo.getTipoFront(),
-                    productoCatalogo.getIdServicio()
-            );
+                    productoCatalogo.getIdServicio());
         } catch (RetryableException e) {
-            /*
-             * MANEJO DE LA INCERTIDUMBRE POR TIMEOUTS (504 GATEWAY TIMEOUT):
-             * Ante un timeout de lectura/conexión con el proveedor externo, se desconoce si la transacción
-             * se aplicó o no en los sistemas centrales de GestoPago. Revertir o dar por fallida la operación
-             * generaría el riesgo de falsos negativos (que el servicio se haya pagado pero el dinero no se debite).
-             * Por tanto, la transacción se marca en estado TIMEOUT_REVISION para su posterior verificación
-             * o conciliación, y se lanza una excepción amigable al cliente evitando el reintento automático no controlado.
-             */
             log.error("Timeout de comunicación con GestoPago para idempotencyKey={}: {}",
                     request.getIdempotencyKey(), e.getMessage());
             transaccion.setEstatus(EstadoTransaccion.TIMEOUT_REVISION);
@@ -220,7 +204,8 @@ public class PagoServicioServiceImpl implements PagoServicioService {
 
             throw new ExternalIntegrationException(
                     "Tiempo de espera agotado con el proveedor GestoPago. La transacción [Clave: "
-                            + request.getIdempotencyKey() + "] se encuentra en estado de verificación para confirmar su aplicación. "
+                            + request.getIdempotencyKey()
+                            + "] se encuentra en estado de verificación para confirmar su aplicación. "
                             + "Por favor no reintente el pago inmediatamente para evitar cobros duplicados.",
                     HttpStatus.GATEWAY_TIMEOUT, e);
         } catch (FeignException.Unauthorized e) {
@@ -228,20 +213,24 @@ public class PagoServicioServiceImpl implements PagoServicioService {
             transaccion.setEstatus(EstadoTransaccion.FALLIDA);
             transaccion.setMensajeRespuestaGestoPago("Autenticación no válida en el servicio externo");
             transaccionPagoRepository.save(transaccion);
-            throw new ExternalIntegrationException("Autenticación no válida en el servicio externo GestoPago", HttpStatus.UNAUTHORIZED, e);
+            throw new ExternalIntegrationException("Autenticación no válida en el servicio externo GestoPago",
+                    HttpStatus.UNAUTHORIZED, e);
         } catch (FeignException.Forbidden e) {
             log.error("Error 403 Forbidden en sendTx.do de GestoPago: Token expirado o no autorizado");
             transaccion.setEstatus(EstadoTransaccion.FALLIDA);
             transaccion.setMensajeRespuestaGestoPago("Token expirado o no autorizado");
             transaccionPagoRepository.save(transaccion);
-            throw new ExternalIntegrationException("El Bearer Token ha expirado o no cuenta con autorización", HttpStatus.FORBIDDEN, e);
+            throw new ExternalIntegrationException("El Bearer Token ha expirado o no cuenta con autorización",
+                    HttpStatus.FORBIDDEN, e);
         } catch (FeignException e) {
             log.error("Error Feign al consumir sendTx.do de GestoPago (Status {}): {}", e.status(), e.getMessage());
             transaccion.setEstatus(EstadoTransaccion.FALLIDA);
             transaccion.setMensajeRespuestaGestoPago("Error en la comunicación con el servicio externo");
             transaccionPagoRepository.save(transaccion);
-            HttpStatus status = HttpStatus.resolve(e.status()) != null ? HttpStatus.resolve(e.status()) : HttpStatus.BAD_GATEWAY;
-            throw new ExternalIntegrationException("Error de comunicación con el servicio externo GestoPago", status, e);
+            HttpStatus status = HttpStatus.resolve(e.status()) != null ? HttpStatus.resolve(e.status())
+                    : HttpStatus.BAD_GATEWAY;
+            throw new ExternalIntegrationException("Error de comunicación con el servicio externo GestoPago", status,
+                    e);
         } catch (ExternalIntegrationException e) {
             transaccion.setEstatus(EstadoTransaccion.FALLIDA);
             transaccion.setMensajeRespuestaGestoPago(e.getMessage());
@@ -252,7 +241,8 @@ public class PagoServicioServiceImpl implements PagoServicioService {
             transaccion.setEstatus(EstadoTransaccion.FALLIDA);
             transaccion.setMensajeRespuestaGestoPago("Fallo inesperado en el procesamiento de la transacción");
             transaccionPagoRepository.save(transaccion);
-            throw new ExternalIntegrationException("Fallo inesperado al conectar con el servicio externo GestoPago", HttpStatus.INTERNAL_SERVER_ERROR, e);
+            throw new ExternalIntegrationException("Fallo inesperado al conectar con el servicio externo GestoPago",
+                    HttpStatus.INTERNAL_SERVER_ERROR, e);
         }
 
         // 7. Procesamiento del XML de Respuesta de GestoPago
@@ -261,7 +251,8 @@ public class PagoServicioServiceImpl implements PagoServicioService {
         if (txResponse.getMensaje() == null) {
             transaccion.setEstatus(EstadoTransaccion.FALLIDA);
             transaccionPagoRepository.save(transaccion);
-            throw new ExternalIntegrationException("Respuesta sin encabezado de mensaje devuelta por GestoPago", HttpStatus.BAD_GATEWAY);
+            throw new ExternalIntegrationException("Respuesta sin encabezado de mensaje devuelta por GestoPago",
+                    HttpStatus.BAD_GATEWAY);
         }
 
         String codigoRespuesta = txResponse.getMensaje().getCodigo();
@@ -282,7 +273,6 @@ public class PagoServicioServiceImpl implements PagoServicioService {
             log.warn("Transacción rechazada por GestoPago. Código: [{}], Mensaje: {}", codigoRespuesta, textoRespuesta);
             transaccion.setEstatus(EstadoTransaccion.FALLIDA);
             transaccion = transaccionPagoRepository.save(transaccion);
-            // Saldo permanece intacto y se retorna el comprobante con estado FALLIDA
             return mapToResponse(transaccion);
         }
 
@@ -307,7 +297,8 @@ public class PagoServicioServiceImpl implements PagoServicioService {
         log.info("Consultando estado de transacción con idempotencyKey={}", request.getIdempotencyKey());
         TransaccionPago transaccion = transaccionPagoRepository.findByIdempotencyKey(request.getIdempotencyKey())
                 .orElseThrow(() -> new NegocioException(
-                        "No se encontró ninguna transacción registrada con la clave de idempotencia: " + request.getIdempotencyKey(),
+                        "No se encontró ninguna transacción registrada con la clave de idempotencia: "
+                                + request.getIdempotencyKey(),
                         HttpStatus.NOT_FOUND));
 
         return mapToResponse(transaccion);
@@ -318,28 +309,27 @@ public class PagoServicioServiceImpl implements PagoServicioService {
         if (StringUtils.isNotBlank(precioConfigurado)) {
             try {
                 BigDecimal precioFijo = new BigDecimal(precioConfigurado.trim());
-                if (precioFijo.compareTo(BigDecimal.ZERO) > 0) {
-                    if (precioFijo.compareTo(monto) != 0) {
-                        log.warn("Monto solicitado ({}) no coincide con precio fijo del producto ({})",
-                                monto, precioFijo);
-                        throw new MontoInvalidoProductoException(String.format(
-                                "El monto enviado ($%s) no coincide con el precio fijo configurado para el producto '%s' ($%s)",
-                                monto.toPlainString(), producto.getProducto(), precioFijo.toPlainString()));
-                    }
+                if (precioFijo.compareTo(BigDecimal.ZERO) > 0 && precioFijo.compareTo(monto) != 0) {
+                    log.warn("Monto solicitado ({}) no coincide con precio fijo del producto ({})",
+                            monto, precioFijo);
+                    throw new MontoInvalidoProductoException(String.format(
+                            "El monto enviado ($%s) no coincide con el precio fijo configurado para el producto '%s' ($%s)",
+                            monto.toPlainString(), producto.getProducto(), precioFijo.toPlainString()));
                 }
             } catch (NumberFormatException ignored) {
-                // Precios no numéricos (ej. "VARIABLE", "LIBRE") admiten cualquier monto válido mayor a 0
+                // Precios no numéricos (ej. "VARIABLE", "LIBRE") admiten cualquier monto válido
+                // mayor a 0
             }
         }
     }
 
     private String invocarSendTx(String authorizationHeader,
-                                 Integer idProducto,
-                                 String monto,
-                                 String referencia,
-                                 String digitoVerificador,
-                                 Integer tipoFront,
-                                 Integer idServicio) {
+            Integer idProducto,
+            String monto,
+            String referencia,
+            String digitoVerificador,
+            Integer tipoFront,
+            Integer idServicio) {
         log.info("Invocando cliente Feign POST /sistema/service/sendTx.do idProducto={} monto={} ref={}",
                 idProducto, monto, referencia);
 
@@ -352,8 +342,7 @@ public class PagoServicioServiceImpl implements PagoServicioService {
                     referencia,
                     digitoVerificador,
                     tipoFront,
-                    idServicio
-            );
+                    idServicio);
         } finally {
             long duration = System.currentTimeMillis() - startTime;
             log.info("Fin de la invocación externa a sendTx.do en {} ms", duration);
@@ -365,7 +354,8 @@ public class PagoServicioServiceImpl implements PagoServicioService {
     public List<PagoServicioResponse> obtenerHistorial(PagoHistorialRequest request) {
         Integer clienteId = request != null ? request.getClienteId() : null;
         String numeroCuenta = request != null ? request.getNumeroCuenta() : null;
-        boolean soloExitosas = request == null || request.getSoloExitosas() == null || Boolean.TRUE.equals(request.getSoloExitosas());
+        boolean soloExitosas = request == null || request.getSoloExitosas() == null
+                || Boolean.TRUE.equals(request.getSoloExitosas());
 
         List<TransaccionPago> transacciones;
         if (clienteId != null && clienteId > 0) {
@@ -373,9 +363,7 @@ public class PagoServicioServiceImpl implements PagoServicioService {
         } else if (StringUtils.isNotBlank(numeroCuenta)) {
             transacciones = transaccionPagoRepository.findByNumeroCuentaOrderByFechaCreacionDesc(numeroCuenta.trim());
         } else {
-            transacciones = transaccionPagoRepository.findAll(
-                    org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "fechaCreacion")
-            );
+            transacciones = transaccionPagoRepository.findAll(Sort.by(Sort.Direction.DESC, "fechaCreacion"));
         }
 
         return transacciones.stream()
@@ -407,13 +395,15 @@ public class PagoServicioServiceImpl implements PagoServicioService {
             log.error("Error al intentar renovar token de GestoPago: {}", e.getMessage());
         }
 
-        throw new ExternalIntegrationException("No se dispone de un Bearer Token válido para procesar el pago", HttpStatus.UNAUTHORIZED);
+        throw new ExternalIntegrationException("No se dispone de un Bearer Token válido para procesar el pago",
+                HttpStatus.UNAUTHORIZED);
     }
 
     private GestoPagoTxResponse unmarshalXml(String xmlContent) {
         if (StringUtils.isBlank(xmlContent)) {
             log.error("La respuesta XML obtenida de sendTx.do está vacía");
-            throw new ExternalIntegrationException("Respuesta vacía del servicio externo GestoPago", HttpStatus.BAD_GATEWAY);
+            throw new ExternalIntegrationException("Respuesta vacía del servicio externo GestoPago",
+                    HttpStatus.BAD_GATEWAY);
         }
 
         try {
@@ -427,17 +417,24 @@ public class PagoServicioServiceImpl implements PagoServicioService {
 
             if (response == null || response.getMensaje() == null) {
                 log.error("Estructura XML de sendTx.do no coincide con el formato esperado");
-                throw new ExternalIntegrationException("Formato XML de respuesta no válido devuelto por GestoPago", HttpStatus.BAD_GATEWAY);
+                throw new ExternalIntegrationException("Formato XML de respuesta no válido devuelto por GestoPago",
+                        HttpStatus.BAD_GATEWAY);
             }
 
             return response;
         } catch (JAXBException | XMLStreamException e) {
             log.error("Error al deserializar el XML devuelto por GestoPago sendTx.do: {}", e.getMessage());
-            throw new ExternalIntegrationException("Error en el procesamiento del XML devuelto por el servicio externo GestoPago", HttpStatus.INTERNAL_SERVER_ERROR, e);
+            throw new ExternalIntegrationException(
+                    "Error en el procesamiento del XML devuelto por el servicio externo GestoPago",
+                    HttpStatus.INTERNAL_SERVER_ERROR, e);
         }
     }
 
     private PagoServicioResponse mapToResponse(TransaccionPago tx) {
+        String urlLogo = catalogoProductoRepository.findByIdProducto(tx.getIdProducto())
+                .map(c -> GestoPagoProductServiceImpl.normalizarUrlLogo(c.getUrlLogo()))
+                .orElse(null);
+
         return PagoServicioResponse.builder()
                 .idTransaccion(tx.getId())
                 .idempotencyKey(tx.getIdempotencyKey())
@@ -459,6 +456,7 @@ public class PagoServicioServiceImpl implements PagoServicioService {
                 .autorizacionGestoPago(tx.getAutorizacionGestoPago())
                 .ticket(tx.getTicketGestoPago())
                 .fecha(tx.getFechaCreacion())
+                .urlLogo(urlLogo)
                 .build();
     }
 }

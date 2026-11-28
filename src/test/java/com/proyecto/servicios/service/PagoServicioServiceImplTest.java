@@ -9,6 +9,7 @@ import com.proyecto.servicios.entity.onboarding.Cuenta;
 import com.proyecto.servicios.entity.onboarding.EstatusCuenta;
 import com.proyecto.servicios.exception.*;
 import com.proyecto.servicios.model.gestopago.*;
+import com.proyecto.servicios.repositorys.gestopago.CatalogoProductoRepository;
 import com.proyecto.servicios.repositorys.gestopago.TransaccionPagoRepository;
 import com.proyecto.servicios.repositorys.onboarding.CuentaRepository;
 import com.proyecto.servicios.service.Impl.PagoServicioServiceImpl;
@@ -51,6 +52,9 @@ class PagoServicioServiceImplTest {
 
     @Mock
     private GestoPagoTokenService gestoPagoTokenService;
+
+    @Mock
+    private CatalogoProductoRepository catalogoProductoRepository;
 
     @InjectMocks
     private PagoServicioServiceImpl pagoServicioService;

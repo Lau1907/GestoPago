@@ -246,15 +246,23 @@ const Pago = {
       ? Catalogo.obtenerIcono(compra.servicio)
       : (esExitosa ? '✅' : '❌');
 
-    if (logoEl) logoEl.textContent = serviceIcon;
+    if (logoEl) {
+      if (compra.urlLogo) {
+        logoEl.innerHTML = `<img src="${compra.urlLogo}" alt="${compra.servicio || 'Servicio'}"
+          style="width:48px;height:48px;object-fit:contain;border-radius:8px;"
+          onerror="this.outerHTML='<span>${serviceIcon}</span>'">`;
+      } else {
+        logoEl.textContent = serviceIcon;
+      }
+    }
     if (titleEl) {
       titleEl.textContent = esExitosa ? '¡Pago Aplicado con Éxito!' : 'Transacción Rechazada';
     }
     if (badgeEl) {
       badgeEl.textContent = compra.estado || (esExitosa ? 'EXITOSA' : 'FALLIDA');
-      badgeEl.className = esExitosa ? 'badge-success' : 'status-badge rejected';
-      badgeEl.style.background = esExitosa ? '' : 'rgba(214, 48, 49, 0.12)';
-      badgeEl.style.color = esExitosa ? '' : 'var(--danger)';
+      badgeEl.className = esExitosa ? 'badge-success' : 'badge-rejected';
+      badgeEl.style.background = '';
+      badgeEl.style.color = '';
       badgeEl.style.display = 'inline-block';
       badgeEl.style.padding = '4px 12px';
       badgeEl.style.borderRadius = '20px';

@@ -35,9 +35,6 @@ public class GestoPagoTokenServiceImpl implements GestoPagoTokenService {
     @Value("${gestopago.auth.bearer-token:}")
     private String fallbackBearerToken;
 
-    @Value("${gestopago.mock.enabled:false}")
-    private boolean mockEnabled;
-
     public GestoPagoTokenServiceImpl(GestoPagoAuthClient gestoPagoAuthClient,
                                      GestoPagoTokenRepository tokenRepository,
                                      GestoPagoTokenMapper tokenMapper) {
@@ -49,14 +46,9 @@ public class GestoPagoTokenServiceImpl implements GestoPagoTokenService {
     @PostConstruct
     public void init() {
         Optional<GestoPagoToken> existing = tokenRepository.findByIdDistribuidorAndCodigoDispositivo(idDistribuidor, codigoDispositivo);
-        if (existing.isEmpty()) {
-            if (StringUtils.isNotBlank(fallbackBearerToken)) {
-                log.info("Inicializando token de respaldo/sandbox para distribuidor={} desde configuración", idDistribuidor);
-                persistirTokenRespaldo(fallbackBearerToken);
-            } else if (mockEnabled || StringUtils.isBlank(password)) {
-                log.info("Inicializando token simulado (Modo Mock) para distribuidor={}", idDistribuidor);
-                persistirTokenRespaldo("mock-gestopago-jwt-token-distribuidor-" + idDistribuidor);
-            }
+        if (existing.isEmpty() && StringUtils.isNotBlank(fallbackBearerToken)) {
+            log.info("Inicializando token de respaldo para distribuidor={} desde configuración", idDistribuidor);
+            persistirTokenRespaldo(fallbackBearerToken);
         }
     }
 
@@ -64,12 +56,6 @@ public class GestoPagoTokenServiceImpl implements GestoPagoTokenService {
     @Scheduled(fixedRateString = "${gestopago.auth.refresh-rate-ms:82800000}", initialDelay = 0)
     public void renovarToken() {
         log.info("Renovando token GestoPago para distribuidor={}", idDistribuidor);
-
-        if (mockEnabled && StringUtils.isBlank(password)) {
-            log.info("Modo Mock activo sin contraseña configurada: asignando token simulado para distribuidor={}", idDistribuidor);
-            persistirTokenRespaldo(StringUtils.isNotBlank(fallbackBearerToken) ? fallbackBearerToken : "mock-gestopago-jwt-token-distribuidor-" + idDistribuidor);
-            return;
-        }
 
         if (StringUtils.isBlank(password)) {
             log.warn("La contraseña de GestoPago (gestopago.auth.password) no está configurada o se encuentra vacía");
@@ -116,11 +102,8 @@ public class GestoPagoTokenServiceImpl implements GestoPagoTokenService {
 
     private void aplicarFallbackSiDisponible(String motivo) {
         if (StringUtils.isNotBlank(fallbackBearerToken)) {
-            log.warn("Activando token de respaldo estático (fallback/sandbox). Motivo: {}", motivo);
+            log.warn("Activando token de respaldo estático. Motivo: {}", motivo);
             persistirTokenRespaldo(fallbackBearerToken);
-        } else if (mockEnabled) {
-            log.warn("Activando token simulado (Modo Mock). Motivo: {}", motivo);
-            persistirTokenRespaldo("mock-gestopago-jwt-token-distribuidor-" + idDistribuidor);
         } else {
             log.warn("No hay un token de respaldo estático (gestopago.auth.bearer-token) configurado en application.properties");
         }
@@ -156,14 +139,6 @@ public class GestoPagoTokenServiceImpl implements GestoPagoTokenService {
                 && this.codigoDispositivo != null && this.codigoDispositivo.equals(codigoDispositivo)) {
             log.info("Token no disponible en base de datos. Utilizando token de respaldo para distribuidor={}", idDistribuidor);
             persistirTokenRespaldo(fallbackBearerToken);
-            return tokenRepository.findByIdDistribuidorAndCodigoDispositivo(idDistribuidor, codigoDispositivo);
-        }
-
-        if (mockEnabled
-                && this.idDistribuidor != null && this.idDistribuidor.equals(idDistribuidor)
-                && this.codigoDispositivo != null && this.codigoDispositivo.equals(codigoDispositivo)) {
-            log.info("Modo Mock activo: auto-generando y persistiendo token simulado para distribuidor={}", idDistribuidor);
-            persistirTokenRespaldo("mock-gestopago-jwt-token-distribuidor-" + idDistribuidor);
             return tokenRepository.findByIdDistribuidorAndCodigoDispositivo(idDistribuidor, codigoDispositivo);
         }
 

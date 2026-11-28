@@ -25,7 +25,6 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    // Verificar si hay un mensaje de sesión invalidada por otro dispositivo (HTTP 401)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = context.read<AuthProvider>();
       if (authProvider.sessionInvalidatedMessage != null) {
@@ -40,20 +39,13 @@ class _LoginScreenState extends State<LoginScreen> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        icon: const Icon(Icons.warning_amber_rounded, color: AppTheme.danger, size: 48),
-        title: const Text(
-          'Sesión Cerrada',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-        content: Text(
-          mensaje,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 14, height: 1.4),
-        ),
+        icon: const Icon(Icons.lock_rounded, color: AppTheme.danger, size: 48),
+        title: const Text('Sesión Cerrada en este Dispositivo'),
+        content: Text(mensaje),
         actions: [
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Entendido', style: TextStyle(fontWeight: FontWeight.w600)),
+            child: const Text('Entendido, Ir al Login'),
           ),
         ],
       ),
@@ -112,6 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 14),
               TextField(
                 controller: urlController,
+                style: const TextStyle(color: AppTheme.textPrimary),
                 decoration: const InputDecoration(
                   labelText: 'URL Base',
                   hintText: 'http://127.0.0.1:8080',
@@ -123,21 +116,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 runSpacing: 6,
                 children: [
                   OutlinedButton(
-                    onPressed: () {
-                      urlController.text = AppConfig.defaultLoopbackUrl;
-                    },
+                    onPressed: () { urlController.text = AppConfig.defaultLoopbackUrl; },
                     child: const Text('127.0.0.1:8080', style: TextStyle(fontSize: 11)),
                   ),
                   OutlinedButton(
-                    onPressed: () {
-                      urlController.text = AppConfig.defaultAndroidEmulatorUrl;
-                    },
+                    onPressed: () { urlController.text = AppConfig.defaultAndroidEmulatorUrl; },
                     child: const Text('10.0.2.2 (Android)', style: TextStyle(fontSize: 11)),
                   ),
                   OutlinedButton(
-                    onPressed: () {
-                      urlController.text = AppConfig.defaultLocalhostUrl;
-                    },
+                    onPressed: () { urlController.text = AppConfig.defaultLocalhostUrl; },
                     child: const Text('localhost:8080', style: TextStyle(fontSize: 11)),
                   ),
                 ],
@@ -145,7 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 8),
               const Text(
                 'Para dispositivo físico: use la IP de su red local (ej. http://192.168.1.X:8080).',
-                style: TextStyle(fontSize: 10, color: Colors.grey, fontStyle: FontStyle.italic),
+                style: TextStyle(fontSize: 10, color: AppTheme.textMuted, fontStyle: FontStyle.italic),
               ),
             ],
           ),
@@ -176,8 +163,27 @@ class _LoginScreenState extends State<LoginScreen> {
     final configProvider = context.watch<ConfigProvider>();
 
     return Scaffold(
+      backgroundColor: AppTheme.surface,
       appBar: AppBar(
-        title: const Text('Banca Móvil'),
+        title: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppTheme.primary, AppTheme.primaryHover],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.account_balance, size: 18, color: Colors.white),
+            ),
+            const SizedBox(width: 10),
+            const Text('Banca Digital'),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
@@ -189,83 +195,87 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
             child: Form(
               key: _formKey,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Logo / Icono Bancario
+                  // ── Ícono de seguridad ──────────────────────────────────────
                   Center(
                     child: Container(
                       width: 76,
                       height: 76,
                       decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.1),
+                        gradient: LinearGradient(
+                          colors: [
+                            AppTheme.primary.withValues(alpha: 0.22),
+                            AppTheme.primaryHover.withValues(alpha: 0.12),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                         shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppTheme.primary.withValues(alpha: 0.35),
+                        ),
                       ),
                       child: const Icon(
-                        Icons.account_balance,
-                        size: 40,
-                        color: AppTheme.primary,
+                        Icons.lock_rounded,
+                        size: 36,
+                        color: AppTheme.primaryLight,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 20),
+
+                  // ── Título ─────────────────────────────────────────────────
                   const Text(
                     'Iniciar Sesión',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w800,
                       color: AppTheme.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 12),
-OutlinedButton(
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const RegistroClienteScreen(),
-      ),
-    );
-  },
-  child: const Text('¿No tienes cuenta? Regístrate'),
-),
                   const SizedBox(height: 6),
                   const Text(
-                    'Canal Móvil Seguro (Sesión Única)',
+                    'Acceso exclusivo a la Plataforma Móvil de Pagos',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppTheme.textSecondary,
-                    ),
+                    style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
                   ),
-                  const SizedBox(height: 10),
-                  // Badge visual del canal MOBILE y la URL conectada adaptable
+                  const SizedBox(height: 14),
+
+                  // ── Badge dispositivo ──────────────────────────────────────
                   Center(
                     child: Container(
                       constraints: const BoxConstraints(maxWidth: 320),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
+                        color: AppTheme.primary.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.blue.shade200),
+                        border: Border.all(
+                          color: AppTheme.primary.withValues(alpha: 0.35),
+                        ),
                       ),
                       child: Text(
-                        'Dispositivo: MOBILE • ${configProvider.currentBaseUrl}',
-                        style: TextStyle(fontSize: 11, color: Colors.blue.shade800),
+                        'Dispositivo: MOBILE  •  ${configProvider.currentBaseUrl}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF93C5FD),
+                          fontWeight: FontWeight.w600,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 26),
+                  const SizedBox(height: 28),
 
-                  // Input Correo
+                  // ── Inputs ─────────────────────────────────────────────────
                   CustomTextField(
                     controller: _correoController,
                     label: 'Correo Electrónico',
@@ -282,9 +292,8 @@ OutlinedButton(
                       return null;
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
 
-                  // Input Contraseña
                   CustomTextField(
                     controller: _passwordController,
                     label: 'Contraseña',
@@ -292,38 +301,53 @@ OutlinedButton(
                     obscureText: _obscurePassword,
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                        _obscurePassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
                         size: 20,
+                        color: AppTheme.textSecondary,
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
+                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                     ),
                     validator: (val) {
-                      if (val == null || val.isEmpty) {
-                        return 'La contraseña es obligatoria';
-                      }
+                      if (val == null || val.isEmpty) return 'La contraseña es obligatoria';
                       return null;
                     },
                   ),
                   const SizedBox(height: 24),
 
-                  // Botón Iniciar Sesión
+                  // ── Botón principal ────────────────────────────────────────
                   CustomButton(
-                    text: 'Ingresar a mi Cuenta',
-                    icon: Icons.login,
+                    text: 'Ingresar a la Plataforma →',
+                    icon: Icons.login_rounded,
                     isLoading: authProvider.isLoading,
                     onPressed: _onSubmit,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
 
-                  // Nota informativa de seguridad
+                  // ── Botón secundario ───────────────────────────────────────
+                  OutlinedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const RegistroClienteScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text('Crear Cuenta / Registrar Cliente'),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Nota de seguridad ──────────────────────────────────────
                   const Text(
-                    'Si inicia sesión en otro dispositivo (Web o Móvil), esta sesión será cerrada automáticamente por seguridad (Control de Sesión Única).',
+                    '* Control de Sesión Única activo: Si inicia sesión desde otro dispositivo, esta sesión será invalidada automáticamente por seguridad.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 11, color: AppTheme.textSecondary, height: 1.4),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textMuted,
+                      height: 1.4,
+                    ),
                   ),
                 ],
               ),

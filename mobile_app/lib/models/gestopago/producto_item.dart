@@ -10,6 +10,7 @@ class ProductoItem {
   final bool showAyuda;
   final String? tipoReferencia;
   final String? legend;
+  final String? urlLogo;
 
   ProductoItem({
     required this.servicio,
@@ -23,6 +24,7 @@ class ProductoItem {
     this.showAyuda = false,
     this.tipoReferencia,
     this.legend,
+    this.urlLogo,
   });
 
   factory ProductoItem.fromJson(Map<String, dynamic> json) {
@@ -46,6 +48,7 @@ class ProductoItem {
       showAyuda: json['showAyuda'] == true,
       tipoReferencia: json['tipoReferencia'] as String?,
       legend: json['legend'] as String?,
+      urlLogo: json['urlLogo'] as String?,
     );
   }
 

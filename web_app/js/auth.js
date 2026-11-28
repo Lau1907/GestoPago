@@ -383,7 +383,7 @@ const Auth = {
     document.getElementById('auth-login-view').style.display = 'none';
     const regView = document.getElementById('auth-register-view');
     if (regView) regView.style.display = 'none';
-    document.getElementById('auth-2fa-view').style.display = 'block';
+    document.getElementById('auth-2fa-view').style.display = 'flex';
     document.getElementById('otp-user-email').textContent = correo;
 
     const otpError = document.getElementById('otp-error');
@@ -502,8 +502,8 @@ const Auth = {
 
     // Mostrar vistas de autenticación
     const authViews = document.getElementById('auth-views');
-    if (authViews) authViews.style.display = 'block';
-    document.getElementById('auth-login-view').style.display = 'block';
+    if (authViews) authViews.style.display = 'flex';
+    document.getElementById('auth-login-view').style.display = 'flex';
     const regView = document.getElementById('auth-register-view');
     if (regView) regView.style.display = 'none';
     document.getElementById('auth-2fa-view').style.display = 'none';

@@ -20,9 +20,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _recargar();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _recargar());
   }
 
   void _recargar() {
@@ -36,9 +34,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
   void _verComprobante(PagoServicioResponse pago) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => ComprobantePagoScreen(pago: pago),
-      ),
+      MaterialPageRoute(builder: (_) => ComprobantePagoScreen(pago: pago)),
     );
   }
 
@@ -48,6 +44,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
     final listaExitosas = historialProvider.comprasExitosas;
 
     return Scaffold(
+      backgroundColor: AppTheme.surface,
       appBar: AppBar(
         title: const Text('Historial de Compras'),
         actions: [
@@ -59,11 +56,13 @@ class _HistorialScreenState extends State<HistorialScreen> {
         ],
       ),
       body: RefreshIndicator(
+        color: AppTheme.primary,
+        backgroundColor: AppTheme.cardBg,
         onRefresh: () async => _recargar(),
         child: Builder(
           builder: (context) {
             if (historialProvider.isLoading && listaExitosas.isEmpty) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
             }
 
             if (listaExitosas.isEmpty) {
@@ -71,29 +70,34 @@ class _HistorialScreenState extends State<HistorialScreen> {
                 icon: Icons.receipt_long_outlined,
                 title: 'Sin compras exitosas',
                 message:
-                    'Aquí se mostrarán únicamente las compras y pagos completados exitosamente en la aplicación.',
+                    'Aquí se mostrarán únicamente las compras y pagos completados exitosamente.',
                 actionText: 'Actualizar',
                 onAction: _recargar,
               );
             }
 
             return ListView.separated(
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               itemCount: listaExitosas.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 2),
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final pago = listaExitosas[index];
 
-                return Card(
+                return Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.cardBg,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppTheme.borderColor),
+                  ),
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(14),
                     onTap: () => _verComprobante(pago),
                     child: Padding(
-                      padding: const EdgeInsets.all(16.0),
+                      padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Cabecera de la tarjeta: Producto y Estado
+                          // Cabecera
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -101,7 +105,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                                 child: Text(
                                   pago.producto ?? 'Servicio Pagado',
                                   style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w700,
                                     fontSize: 15,
                                     color: AppTheme.textPrimary,
                                   ),
@@ -115,7 +119,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
                           ),
                           const SizedBox(height: 4),
 
-                          // Servicio
                           Text(
                             pago.servicio ?? 'GestoPago',
                             style: const TextStyle(
@@ -125,14 +128,14 @@ class _HistorialScreenState extends State<HistorialScreen> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const Divider(height: 18),
 
-                          // Datos de la compra adaptables: Importe, Fecha, Folio y Referencia
+                          const Divider(height: 16),
+
+                          // Detalles
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              // Columna izquierda adaptable (Folio, Ref, Fecha)
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,7 +145,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                                       style: const TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
-                                        color: AppTheme.primary,
+                                        color: AppTheme.primaryLight,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -150,9 +153,9 @@ class _HistorialScreenState extends State<HistorialScreen> {
                                     const SizedBox(height: 2),
                                     Text(
                                       'Ref: ${pago.referencia ?? '-'}',
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         fontSize: 11,
-                                        color: Colors.grey.shade600,
+                                        color: AppTheme.textSecondary,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -160,25 +163,22 @@ class _HistorialScreenState extends State<HistorialScreen> {
                                     const SizedBox(height: 2),
                                     Text(
                                       Formatters.formatDateTime(pago.fecha),
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         fontSize: 11,
-                                        color: Colors.grey.shade500,
+                                        color: AppTheme.textMuted,
                                       ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ],
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              // Columna derecha fija/flexible (Monto y enlace Ver Ticket)
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   Text(
                                     Formatters.formatCurrency(pago.monto),
                                     style: const TextStyle(
-                                      fontSize: 17,
+                                      fontSize: 18,
                                       fontWeight: FontWeight.w900,
                                       color: AppTheme.accent,
                                     ),
@@ -191,11 +191,15 @@ class _HistorialScreenState extends State<HistorialScreen> {
                                         'Ver Ticket',
                                         style: TextStyle(
                                           fontSize: 11,
-                                          color: AppTheme.primary,
+                                          color: AppTheme.primaryLight,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                      Icon(Icons.chevron_right, size: 16, color: AppTheme.primary),
+                                      Icon(
+                                        Icons.chevron_right,
+                                        size: 16,
+                                        color: AppTheme.primaryLight,
+                                      ),
                                     ],
                                   ),
                                 ],

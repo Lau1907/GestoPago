@@ -93,8 +93,9 @@ class _ProductoDetalleSheetState extends State<ProductoDetalleSheet> {
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.cardBg,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border(top: BorderSide(color: AppTheme.borderColor)),
       ),
       child: Form(
         key: _formKey,
@@ -109,7 +110,7 @@ class _ProductoDetalleSheetState extends State<ProductoDetalleSheet> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: AppTheme.borderSubtle,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -120,6 +121,24 @@ class _ProductoDetalleSheetState extends State<ProductoDetalleSheet> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Logo del servicio (imagen de red o ícono fallback)
+                  if (widget.producto.urlLogo != null) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.network(
+                        widget.producto.urlLogo!,
+                        width: 44,
+                        height: 44,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.payment,
+                          size: 36,
+                          color: AppTheme.primaryLight,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,12 +164,12 @@ class _ProductoDetalleSheetState extends State<ProductoDetalleSheet> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: const Icon(Icons.close, color: AppTheme.textSecondary),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
-              const Divider(height: 24),
+              const Divider(height: 24, color: AppTheme.borderColor),
 
               // Información de débito bancario adaptable
               Container(
@@ -158,11 +177,11 @@ class _ProductoDetalleSheetState extends State<ProductoDetalleSheet> {
                 decoration: BoxDecoration(
                   color: AppTheme.surface,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
+                  border: Border.all(color: AppTheme.borderColor),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.account_balance_wallet_outlined, color: AppTheme.primary),
+                    const Icon(Icons.account_balance_wallet_outlined, color: AppTheme.primaryLight),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -174,7 +193,11 @@ class _ProductoDetalleSheetState extends State<ProductoDetalleSheet> {
                           ),
                           Text(
                             cuenta != null ? Formatters.maskAccount(cuenta.numeroCuenta) : 'Sin cuenta',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: AppTheme.textPrimary,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),

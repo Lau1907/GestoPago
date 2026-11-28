@@ -91,9 +91,17 @@ const Catalogo = {
         ? `$${precioFijo.toFixed(2)} MXN`
         : `<span class="free">Monto Libre</span>`;
 
+      // Logo: imagen de red con fallback al emoji de servicio
+      const logoHtml = prod.urlLogo
+        ? `<img src="${prod.urlLogo}" alt="${this.escapeHtml(prod.servicio)}"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+              style="width:40px;height:40px;object-fit:contain;border-radius:8px;">
+           <span class="product-icon-fallback" style="display:none">${icon}</span>`
+        : icon;
+
       card.innerHTML = `
         <div class="product-card-top">
-          <div class="product-icon">${icon}</div>
+          <div class="product-icon">${logoHtml}</div>
           <div class="product-info">
             <div class="product-title">${this.escapeHtml(prod.producto)}</div>
             <div class="product-category">${this.escapeHtml(prod.servicio)}</div>

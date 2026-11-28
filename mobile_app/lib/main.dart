@@ -72,7 +72,9 @@ class _BancaMovilAppState extends State<BancaMovilApp> {
         title: 'Banca Móvil GestoPago',
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
+        theme: AppTheme.darkTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.dark,
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,

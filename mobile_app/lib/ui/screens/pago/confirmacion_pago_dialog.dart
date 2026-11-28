@@ -142,6 +142,12 @@ class _ConfirmacionPagoDialogState extends State<ConfirmacionPagoDialog> {
     final pagoProvider = context.watch<PagoProvider>();
 
     return AlertDialog(
+      backgroundColor: AppTheme.cardBg,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: AppTheme.borderColor),
+      ),
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -152,16 +158,17 @@ class _ConfirmacionPagoDialogState extends State<ConfirmacionPagoDialog> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha: 0.1),
+              color: AppTheme.primary.withValues(alpha: 0.16),
               borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3)),
             ),
-            child: const Icon(Icons.shopping_bag_outlined, color: AppTheme.primary, size: 22),
+            child: const Icon(Icons.shopping_bag_outlined, color: AppTheme.primaryLight, size: 22),
           ),
           const SizedBox(width: 10),
           const Expanded(
             child: Text(
               'Confirmar Compra',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -184,7 +191,7 @@ class _ConfirmacionPagoDialogState extends State<ConfirmacionPagoDialog> {
               decoration: BoxDecoration(
                 color: AppTheme.surface,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
+                border: Border.all(color: AppTheme.borderColor),
               ),
               child: Column(
                 children: [
@@ -194,7 +201,7 @@ class _ConfirmacionPagoDialogState extends State<ConfirmacionPagoDialog> {
                   if (widget.digitoVerificador != null && widget.digitoVerificador!.isNotEmpty)
                     _buildDetalleFila('Dígito Verif.', widget.digitoVerificador!),
                   _buildDetalleFila('Cuenta Origen', Formatters.maskAccount(widget.cuenta.numeroCuenta)),
-                  const Divider(height: 16),
+                  const Divider(height: 16, color: AppTheme.borderColor),
                   _buildDetalleFila(
                     'Importe a Debitar',
                     Formatters.formatCurrency(widget.monto),
@@ -209,7 +216,7 @@ class _ConfirmacionPagoDialogState extends State<ConfirmacionPagoDialog> {
             if (pagoProvider.currentIdempotencyKey != null)
               Text(
                 'Clave Idempotencia: ${pagoProvider.currentIdempotencyKey}',
-                style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary),
                 textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
@@ -226,22 +233,22 @@ class _ConfirmacionPagoDialogState extends State<ConfirmacionPagoDialog> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.05),
+                  color: AppTheme.primary.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+                  border: Border.all(color: AppTheme.primary.withValues(alpha: 0.35)),
                 ),
                 child: const Row(
                   children: [
                     SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2.2),
+                      child: CircularProgressIndicator(strokeWidth: 2.2, color: AppTheme.primaryLight),
                     ),
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'Conectando con GestoPago y debitando cuenta bancaria...',
-                        style: TextStyle(fontSize: 12, color: AppTheme.primary, fontWeight: FontWeight.w500),
+                        style: TextStyle(fontSize: 12, color: AppTheme.primaryLight, fontWeight: FontWeight.w500),
                       ),
                     ),
                   ],
@@ -253,9 +260,9 @@ class _ConfirmacionPagoDialogState extends State<ConfirmacionPagoDialog> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppTheme.danger.withValues(alpha: 0.08),
+                  color: AppTheme.danger.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
+                  border: Border.all(color: AppTheme.danger.withValues(alpha: 0.35)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,7 +287,7 @@ class _ConfirmacionPagoDialogState extends State<ConfirmacionPagoDialog> {
                     Text(
                       pagoProvider.errorMessage ??
                           'La transacción no pudo completarse. Verifique fondos en la cuenta o los datos ingresados.',
-                      style: TextStyle(color: Colors.red.shade900, fontSize: 12, height: 1.3),
+                      style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 12, height: 1.3),
                     ),
                   ],
                 ),
@@ -291,7 +298,7 @@ class _ConfirmacionPagoDialogState extends State<ConfirmacionPagoDialog> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppTheme.warning.withValues(alpha: 0.08),
+                  color: AppTheme.warning.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: AppTheme.warning.withValues(alpha: 0.4)),
                 ),
@@ -300,13 +307,13 @@ class _ConfirmacionPagoDialogState extends State<ConfirmacionPagoDialog> {
                   children: [
                     const Row(
                       children: [
-                        Icon(Icons.pending_actions_outlined, color: Colors.orange, size: 20),
+                        Icon(Icons.pending_actions_outlined, color: AppTheme.warning, size: 20),
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             'Compra en Revisión / Pendiente',
                             style: TextStyle(
-                              color: Colors.orange,
+                              color: AppTheme.warning,
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                             ),
@@ -318,7 +325,7 @@ class _ConfirmacionPagoDialogState extends State<ConfirmacionPagoDialog> {
                     Text(
                       pagoProvider.errorMessage ??
                           'El proveedor no respondió a tiempo. Para su seguridad no se reintentó el cobro para evitar duplicidad.',
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF5D4037), height: 1.3),
+                      style: const TextStyle(fontSize: 12, color: Color(0xFFFCD34D), height: 1.3),
                     ),
                     const SizedBox(height: 10),
                     Center(
@@ -327,8 +334,8 @@ class _ConfirmacionPagoDialogState extends State<ConfirmacionPagoDialog> {
                         icon: const Icon(Icons.sync, size: 16),
                         label: const Text('Reconsultar Estado en Servidor', style: TextStyle(fontSize: 12)),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.orange.shade800,
-                          side: BorderSide(color: Colors.orange.shade400),
+                          foregroundColor: const Color(0xFFFCD34D),
+                          side: BorderSide(color: AppTheme.warning.withValues(alpha: 0.6)),
                         ),
                       ),
                     ),
@@ -341,22 +348,22 @@ class _ConfirmacionPagoDialogState extends State<ConfirmacionPagoDialog> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blueGrey.shade50,
+                  color: AppTheme.inputBg,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.blueGrey.shade200),
+                  border: Border.all(color: AppTheme.borderSubtle),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    const Row(
                       children: [
-                        Icon(Icons.wifi_off_outlined, color: Colors.blueGrey.shade700, size: 20),
-                        const SizedBox(width: 8),
+                        Icon(Icons.wifi_off_outlined, color: AppTheme.textSecondary, size: 20),
+                        SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             'Error de Comunicación',
                             style: TextStyle(
-                              color: Colors.blueGrey.shade800,
+                              color: AppTheme.textPrimary,
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                             ),
@@ -368,7 +375,7 @@ class _ConfirmacionPagoDialogState extends State<ConfirmacionPagoDialog> {
                     Text(
                       pagoProvider.errorMessage ??
                           'No se pudo conectar con el backend de Spring Boot. Verifique que el servicio esté encendido y la URL accesible.',
-                      style: TextStyle(color: Colors.blueGrey.shade900, fontSize: 12, height: 1.3),
+                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12, height: 1.3),
                     ),
                   ],
                 ),

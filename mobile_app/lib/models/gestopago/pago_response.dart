@@ -19,6 +19,7 @@ class PagoServicioResponse {
   final String? autorizacionGestoPago;
   final String? ticket;
   final String? fecha;
+  final String? urlLogo;
 
   PagoServicioResponse({
     this.idTransaccion,
@@ -41,6 +42,7 @@ class PagoServicioResponse {
     this.autorizacionGestoPago,
     this.ticket,
     this.fecha,
+    this.urlLogo,
   });
 
   factory PagoServicioResponse.fromJson(Map<String, dynamic> json) {
@@ -69,6 +71,7 @@ class PagoServicioResponse {
       autorizacionGestoPago: json['autorizacionGestoPago'] as String?,
       ticket: json['ticket'] as String?,
       fecha: json['fecha'] as String?,
+      urlLogo: json['urlLogo'] as String?,
     );
   }
 
@@ -94,6 +97,7 @@ class PagoServicioResponse {
       'autorizacionGestoPago': autorizacionGestoPago,
       'ticket': ticket,
       'fecha': fecha,
+      'urlLogo': urlLogo,
     };
   }
 

@@ -65,7 +65,7 @@ class SesionServiceImplTest {
 
         when(jwtTokenProvider.getExpirationMs()).thenReturn(3600000L);
 
-        when(sesionUsuarioRepository.save(any(SesionUsuario.class)))
+        when(sesionUsuarioRepository.saveAndFlush(any(SesionUsuario.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         // Nuevo inicio de sesión desde MOBILE
@@ -79,7 +79,8 @@ class SesionServiceImplTest {
         assertFalse(sesionPrevia.getActiva());
         assertNotNull(sesionPrevia.getFechaInactivacion());
         assertTrue(sesionPrevia.getMotivoInactivacion().contains("SESION_CERRADA_POR_NUEVO_LOGIN_EN_MOBILE"));
-        verify(sesionUsuarioRepository, atLeast(2)).save(any(SesionUsuario.class));
+        verify(sesionUsuarioRepository, atLeastOnce()).saveAllAndFlush(anyList());
+        verify(sesionUsuarioRepository, atLeastOnce()).saveAndFlush(any(SesionUsuario.class));
     }
 
     @Test

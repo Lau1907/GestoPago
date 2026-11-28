@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../config/app_theme.dart';
 
 class EmptyStateView extends StatelessWidget {
   final IconData icon;
@@ -27,10 +28,11 @@ class EmptyStateView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.blueGrey.withValues(alpha: 0.08),
+                color: AppTheme.primary.withValues(alpha: 0.14),
                 shape: BoxShape.circle,
+                border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3)),
               ),
-              child: Icon(icon, size: 54, color: Colors.blueGrey),
+              child: Icon(icon, size: 54, color: AppTheme.primaryLight),
             ),
             const SizedBox(height: 18),
             Text(
@@ -38,16 +40,16 @@ class EmptyStateView extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF2D3436),
+                color: AppTheme.textPrimary,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               message,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
-                color: Colors.grey.shade600,
+                color: AppTheme.textSecondary,
                 height: 1.4,
               ),
               textAlign: TextAlign.center,

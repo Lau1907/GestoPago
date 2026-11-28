@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../models/onboarding/cliente_create_request.dart';
 import '../../../services/cliente_service.dart';
+import '../../../services/domicilio_service.dart';
 
 class RegistroClienteScreen extends StatefulWidget {
   const RegistroClienteScreen({super.key});
@@ -100,6 +101,15 @@ class _RegistroClienteScreenState extends State<RegistroClienteScreen> {
   // Paso 3
   final _codigoPostalController = TextEditingController();
   String? _estadoSeleccionado;
+  String? _municipioSeleccionado;
+  String? _coloniaSeleccionada;
+  List<String> _municipiosDisponibles = [];
+  List<String> _coloniasDisponibles = [];
+  bool _municipioManual = false;
+  bool _coloniaManual = false;
+  String _cpStatus = '';
+  bool _cpLoading = false;
+  String _ultimoCpConsultado = '';
   final _municipioController = TextEditingController();
   final _coloniaController = TextEditingController();
   final _calleController = TextEditingController();
@@ -256,6 +266,117 @@ class _RegistroClienteScreenState extends State<RegistroClienteScreen> {
   bool _pwdHasLower(String p) => RegExp(r'[a-z]').hasMatch(p);
   bool _pwdHasDigit(String p) => RegExp(r'[0-9]').hasMatch(p);
   bool _pwdHasSymbol(String p) => RegExp(r'[^A-Za-z0-9]').hasMatch(p);
+
+  // ── CP Autocomplete helpers ────────────────────────────────────────────────
+
+  Future<void> _onCpInput(String cp) async {
+    final clean = cp.replaceAll(RegExp(r'[^0-9]'), '');
+    if (clean.length < 5) {
+      setState(() { _cpStatus = ''; _ultimoCpConsultado = ''; });
+      return;
+    }
+    if (clean == _ultimoCpConsultado) return;
+    _ultimoCpConsultado = clean;
+    setState(() { _cpLoading = true; _cpStatus = 'Consultando C.P. en México...'; });
+    final resultado = await DomicilioService.buscarPorCodigoPostal(clean);
+    if (!mounted) return;
+    if (resultado != null && resultado.estado.isNotEmpty) {
+      _aplicarResultadoPostal(resultado);
+      setState(() {
+        _cpLoading = false;
+        _cpStatus = '✓ C.P. $clean localizado: ${resultado.municipio.isNotEmpty ? '${resultado.municipio}, ' : ''}${resultado.estado}';
+      });
+    } else {
+      setState(() {
+        _cpLoading = false;
+        _cpStatus = 'C.P. no encontrado en línea. Selecciona Estado/Municipio o usa "Otra / Ingresar manualmente".';
+      });
+    }
+  }
+
+  void _aplicarResultadoPostal(ResultadoPostal r) {
+    setState(() {
+      _estadoSeleccionado = r.estado;
+      _municipiosDisponibles = DomicilioService.municipiosDe(r.estado);
+      if (r.municipio.isNotEmpty && !_municipiosDisponibles.contains(r.municipio)) {
+        _municipiosDisponibles = [r.municipio, ..._municipiosDisponibles];
+      }
+      _municipioSeleccionado = r.municipio.isNotEmpty ? r.municipio : null;
+      _municipioController.text = r.municipio;
+      _municipioManual = false;
+
+      _coloniasDisponibles = r.colonias.isNotEmpty
+          ? r.colonias
+          : (r.municipio.isNotEmpty ? DomicilioService.coloniasDe(r.estado, r.municipio) : []);
+      _coloniaSeleccionada = _coloniasDisponibles.isNotEmpty ? _coloniasDisponibles.first : null;
+      _coloniaController.text = _coloniaSeleccionada ?? '';
+      _coloniaManual = false;
+    });
+  }
+
+  void _onEstadoChange(String? estado) {
+    if (estado == null) return;
+    setState(() {
+      _estadoSeleccionado = estado;
+      _municipiosDisponibles = DomicilioService.municipiosDe(estado);
+      _municipioSeleccionado = null;
+      _municipioController.clear();
+      _municipioManual = false;
+      _coloniasDisponibles = [];
+      _coloniaSeleccionada = null;
+      _coloniaController.clear();
+      _coloniaManual = false;
+    });
+  }
+
+  void _onMunicipioChange(String? mun) {
+    if (mun == DomicilioService.manualValue) {
+      setState(() {
+        _municipioManual = true;
+        _municipioSeleccionado = null;
+        _municipioController.clear();
+        _coloniasDisponibles = [];
+        _coloniaSeleccionada = null;
+        _coloniaController.clear();
+        _coloniaManual = false;
+      });
+      return;
+    }
+    if (mun == null) return;
+    final colonias = DomicilioService.coloniasDe(_estadoSeleccionado ?? '', mun);
+    final cpSugerido = DomicilioService.cpDe(_estadoSeleccionado ?? '', mun);
+    setState(() {
+      _municipioSeleccionado = mun;
+      _municipioManual = false;
+      _municipioController.text = mun;
+      _coloniasDisponibles = colonias;
+      _coloniaSeleccionada = colonias.isNotEmpty ? colonias.first : null;
+      _coloniaController.text = colonias.isNotEmpty ? colonias.first : '';
+      _coloniaManual = false;
+      if (_codigoPostalController.text.trim().isEmpty && cpSugerido.isNotEmpty) {
+        _codigoPostalController.text = cpSugerido;
+        _ultimoCpConsultado = cpSugerido;
+        _cpStatus = 'C.P. sugerido ($cpSugerido) para $mun';
+      }
+    });
+  }
+
+  void _onColoniaChange(String? col) {
+    if (col == DomicilioService.manualValue) {
+      setState(() {
+        _coloniaManual = true;
+        _coloniaSeleccionada = null;
+        _coloniaController.clear();
+      });
+      return;
+    }
+    if (col == null) return;
+    setState(() {
+      _coloniaSeleccionada = col;
+      _coloniaManual = false;
+      _coloniaController.text = col;
+    });
+  }
 
   void _siguientePaso() {
     final err = _validarPaso(_currentStep);
@@ -755,13 +876,11 @@ class _RegistroClienteScreenState extends State<RegistroClienteScreen> {
       children: [
         const Text(
           'Paso 3 de 3: Domicilio y Acceso',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
+
+        // ── C.P. + Estado ────────────────────────────────────────────────────
         Row(
           children: [
             Expanded(
@@ -772,48 +891,141 @@ class _RegistroClienteScreenState extends State<RegistroClienteScreen> {
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 maxLength: 5,
                 style: const TextStyle(color: Colors.white),
+                onChanged: _onCpInput,
                 decoration: _darkInputDecoration('C.P. (5 dígitos) *', hint: '01234')
-                    .copyWith(counterText: ''),
+                    .copyWith(
+                  counterText: '',
+                  suffixIcon: _cpLoading
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF60A5FA)),
+                          ),
+                        )
+                      : null,
+                ),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               flex: 3,
               child: DropdownButtonFormField<String>(
+                key: ValueKey('estado_$_estadoSeleccionado'),
                 initialValue: _estadoSeleccionado,
                 isExpanded: true,
                 dropdownColor: _cardDark,
                 style: const TextStyle(color: Colors.white),
                 decoration: _darkInputDecoration('Estado *'),
+                hint: const Text('Selecciona', style: TextStyle(color: Color(0xFF6B7280))),
                 items: _estadosMexico
                     .map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis)))
                     .toList(),
-                onChanged: (v) => setState(() => _estadoSeleccionado = v),
+                onChanged: _onEstadoChange,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: _municipioController,
-                style: const TextStyle(color: Colors.white),
-                decoration: _darkInputDecoration('Alcaldía / Municipio *', hint: 'Benito Juárez'),
-              ),
+
+        // Status del CP
+        if (_cpStatus.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            _cpStatus,
+            style: TextStyle(
+              fontSize: 11,
+              color: _cpStatus.startsWith('✓') ? const Color(0xFF34D399) : const Color(0xFFFBBF24),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: TextFormField(
-                controller: _coloniaController,
-                style: const TextStyle(color: Colors.white),
-                decoration: _darkInputDecoration('Colonia *', hint: 'Del Valle'),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
         const SizedBox(height: 14),
+
+        // ── Municipio ────────────────────────────────────────────────────────
+        if (!_municipioManual && _municipiosDisponibles.isNotEmpty) ...[
+          DropdownButtonFormField<String>(
+            key: ValueKey('mun_${_estadoSeleccionado}_$_municipioSeleccionado'),
+            initialValue: _municipioSeleccionado,
+            isExpanded: true,
+            dropdownColor: _cardDark,
+            style: const TextStyle(color: Colors.white),
+            decoration: _darkInputDecoration('Alcaldía / Municipio *'),
+            hint: const Text('Selecciona alcaldía / municipio', style: TextStyle(color: Color(0xFF6B7280))),
+            items: [
+              ..._municipiosDisponibles.map(
+                (m) => DropdownMenuItem(value: m, child: Text(m, overflow: TextOverflow.ellipsis)),
+              ),
+              const DropdownMenuItem(
+                value: '__MANUAL__',
+                child: Text('Otra / Ingresar manualmente', style: TextStyle(color: Color(0xFF60A5FA))),
+              ),
+            ],
+            onChanged: _onMunicipioChange,
+          ),
+        ] else ...[
+          TextFormField(
+            controller: _municipioController,
+            style: const TextStyle(color: Colors.white),
+            decoration: _darkInputDecoration('Alcaldía / Municipio *', hint: 'Escribir alcaldía o municipio')
+                .copyWith(
+              suffixIcon: _municipioManual
+                  ? IconButton(
+                      icon: const Icon(Icons.list, color: Color(0xFF60A5FA), size: 20),
+                      tooltip: 'Volver al selector',
+                      onPressed: () => setState(() {
+                        _municipioManual = false;
+                        _municipioController.clear();
+                      }),
+                    )
+                  : null,
+            ),
+          ),
+        ],
+        const SizedBox(height: 14),
+
+        // ── Colonia ──────────────────────────────────────────────────────────
+        if (!_coloniaManual && _coloniasDisponibles.isNotEmpty) ...[
+          DropdownButtonFormField<String>(
+            key: ValueKey('col_${_municipioSeleccionado}_$_coloniaSeleccionada'),
+            initialValue: _coloniaSeleccionada,
+            isExpanded: true,
+            dropdownColor: _cardDark,
+            style: const TextStyle(color: Colors.white),
+            decoration: _darkInputDecoration('Colonia *'),
+            hint: const Text('Selecciona colonia', style: TextStyle(color: Color(0xFF6B7280))),
+            items: [
+              ..._coloniasDisponibles.map(
+                (c) => DropdownMenuItem(value: c, child: Text(c, overflow: TextOverflow.ellipsis)),
+              ),
+              const DropdownMenuItem(
+                value: '__MANUAL__',
+                child: Text('Otra / Ingresar manualmente', style: TextStyle(color: Color(0xFF60A5FA))),
+              ),
+            ],
+            onChanged: _onColoniaChange,
+          ),
+        ] else ...[
+          TextFormField(
+            controller: _coloniaController,
+            style: const TextStyle(color: Colors.white),
+            decoration: _darkInputDecoration('Colonia *', hint: 'Escribir colonia')
+                .copyWith(
+              suffixIcon: _coloniaManual
+                  ? IconButton(
+                      icon: const Icon(Icons.list, color: Color(0xFF60A5FA), size: 20),
+                      tooltip: 'Volver al selector',
+                      onPressed: () => setState(() {
+                        _coloniaManual = false;
+                        _coloniaController.clear();
+                      }),
+                    )
+                  : null,
+            ),
+          ),
+        ],
+        const SizedBox(height: 14),
+
+        // ── Calle y Números ──────────────────────────────────────────────────
         Row(
           children: [
             Expanded(
@@ -843,6 +1055,8 @@ class _RegistroClienteScreenState extends State<RegistroClienteScreen> {
           ],
         ),
         const SizedBox(height: 16),
+
+        // ── Contraseña ───────────────────────────────────────────────────────
         TextFormField(
           controller: _passwordController,
           obscureText: _obscurePassword,
@@ -862,6 +1076,8 @@ class _RegistroClienteScreenState extends State<RegistroClienteScreen> {
           ).copyWith(counterText: ''),
         ),
         const SizedBox(height: 12),
+
+        // ── Requisitos de contraseña ─────────────────────────────────────────
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
@@ -890,13 +1106,15 @@ class _RegistroClienteScreenState extends State<RegistroClienteScreen> {
                   _buildPwdReqItem('Mayúscula (A-Z)', _pwdHasUpper(pwd)),
                   _buildPwdReqItem('Minúscula (a-z)', _pwdHasLower(pwd)),
                   _buildPwdReqItem('Número (0-9)', _pwdHasDigit(pwd)),
-                  _buildPwdReqItem('Símbolo (@,#,\$, etc.)', _pwdHasSymbol(pwd)),
+                  _buildPwdReqItem(r'Símbolo (@,#,$, etc.)', _pwdHasSymbol(pwd)),
                 ],
               ),
             ],
           ),
         ),
         const SizedBox(height: 14),
+
+        // ── Confirmar Contraseña ─────────────────────────────────────────────
         TextFormField(
           controller: _confirmPasswordController,
           obscureText: _obscureConfirmPassword,
@@ -910,12 +1128,13 @@ class _RegistroClienteScreenState extends State<RegistroClienteScreen> {
                 _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
                 color: const Color(0xFF9CA3AF),
               ),
-              onPressed: () =>
-                  setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+              onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
             ),
           ).copyWith(counterText: ''),
         ),
         const SizedBox(height: 22),
+
+        // ── Acciones ─────────────────────────────────────────────────────────
         Row(
           children: [
             OutlinedButton(
@@ -942,10 +1161,7 @@ class _RegistroClienteScreenState extends State<RegistroClienteScreen> {
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
                     : const Text(
                         'Solicitar Apertura Bancaria',

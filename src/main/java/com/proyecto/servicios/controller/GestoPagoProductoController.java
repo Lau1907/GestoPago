@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -30,6 +31,18 @@ public class GestoPagoProductoController {
     public ResponseEntity<GestoPagoProductListResponse> obtenerProductos() {
         log.info("Petición recibida en endpoint GET /gestopago/productos");
         GestoPagoProductListResponse response = gestoPagoProductService.obtenerProductos();
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    /**
+     * Endpoint REST bajo demanda para sincronizar el catálogo desde GestoPago (máx 1 vez cada 24h).
+     *
+     * @return ResponseEntity con la lista actualizada de productos
+     */
+    @PostMapping(value = "/sincronizar", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<GestoPagoProductListResponse> sincronizarCatalogo() {
+        log.info("Petición recibida en endpoint POST /gestopago/sincronizar");
+        GestoPagoProductListResponse response = gestoPagoProductService.sincronizarCatalogoDesdeGestoPago();
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

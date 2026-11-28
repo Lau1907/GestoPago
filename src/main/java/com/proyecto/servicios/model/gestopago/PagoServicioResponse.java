@@ -74,6 +74,9 @@ public class PagoServicioResponse {
     @Schema(description = "Leyenda o ticket de comprobante emitido por GestoPago")
     private String ticket;
 
+    @Schema(description = "URL completa del logotipo del servicio/producto en GestoPago", example = "https://gestopago.portalventas.net/gestopago/logo/56")
+    private String urlLogo;
+
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @Schema(description = "Fecha y hora del registro de la transacción", example = "2026-10-27T16:50:00")
     private LocalDateTime fecha;
