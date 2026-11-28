@@ -1,12 +1,27 @@
 import '../../config/app_config.dart';
 import '../../core/api/api_client.dart';
 import '../../models/onboarding/cliente_response.dart';
+import '../../models/onboarding/cliente_create_request.dart';
 import '../../models/onboarding/cuenta_response.dart';
 
 class ClienteService {
   final ApiClient _apiClient;
 
   ClienteService({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
+
+  /// Registra un nuevo cliente mediante POST /clientes
+  Future<bool> registrarCliente(ClienteCreateRequest request) async {
+    try {
+      final responseJson = await _apiClient.post(
+        AppConfig.registrarClienteEndpoint,
+        body: request.toJson(),
+        requiresAuth: false,
+      );
+      // Si la respuesta es un Map o contiene un id, consideramos éxito
+      if (responseJson != null) return true;
+    } catch (_) {}
+    return false;
+  }
 
   /// Consulta los datos del cliente por ID (POST /clientes/consultar)
   Future<ClienteResponse?> obtenerClientePorId(int clienteId) async {

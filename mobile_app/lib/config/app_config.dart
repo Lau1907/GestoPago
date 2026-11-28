@@ -30,6 +30,7 @@ class AppConfig {
   
   static String get buscarClienteEndpoint => '$baseUrl/clientes/consultar';
   static String get listarCuentasEndpoint => '$baseUrl/cuentas/buscar';
+  static String get registrarClienteEndpoint => '$baseUrl/clientes';
 
   /// Inicializa la configuración cargando la URL guardada previamente
   static Future<void> initialize() async {

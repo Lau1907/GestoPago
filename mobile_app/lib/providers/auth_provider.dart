@@ -19,7 +19,6 @@ class AuthProvider extends ChangeNotifier {
   String? _sessionInvalidatedMessage;
 
   String? _currentEmail;
-  String? _temporalOtpForDev; // Código OTP para agilizar pruebas en desarrollo
   int? _clienteId;
   ClienteResponse? _cliente;
   List<CuentaResponse> _cuentas = [];
@@ -32,7 +31,6 @@ class AuthProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   String? get sessionInvalidatedMessage => _sessionInvalidatedMessage;
   String? get currentEmail => _currentEmail;
-  String? get temporalOtpForDev => _temporalOtpForDev;
   int? get clienteId => _clienteId;
   ClienteResponse? get cliente => _cliente;
   List<CuentaResponse> get cuentas => _cuentas;
@@ -71,7 +69,6 @@ class AuthProvider extends ChangeNotifier {
     try {
       final LoginResponse response = await _authService.login(correo, password);
       _currentEmail = correo;
-      _temporalOtpForDev = response.codigoOtp;
 
       if (response.requiere2FA) {
         _status = AuthStatus.requiring2FA;
@@ -109,7 +106,6 @@ class AuthProvider extends ChangeNotifier {
       final response = await _authService.verificar2fa(_currentEmail!, codigoOtp);
       if (response.token != null) {
         _status = AuthStatus.authenticated;
-        _temporalOtpForDev = null;
         _isLoading = false;
         notifyListeners();
         await cargarDatosClienteYCuentas();
@@ -190,7 +186,6 @@ class AuthProvider extends ChangeNotifier {
     _cliente = null;
     _cuentas = [];
     _cuentaSeleccionada = null;
-    _temporalOtpForDev = null;
     _isLoading = false;
     notifyListeners();
   }

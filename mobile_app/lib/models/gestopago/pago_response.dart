@@ -14,6 +14,8 @@ class PagoServicioResponse {
   final String? codigoGestoPago;
   final String? mensajeGestoPago;
   final String? folioGestoPago;
+  final String? idTransaccionProveedor;
+  final String? codigoUpc;
   final String? autorizacionGestoPago;
   final String? ticket;
   final String? fecha;
@@ -34,6 +36,8 @@ class PagoServicioResponse {
     this.codigoGestoPago,
     this.mensajeGestoPago,
     this.folioGestoPago,
+    this.idTransaccionProveedor,
+    this.codigoUpc,
     this.autorizacionGestoPago,
     this.ticket,
     this.fecha,
@@ -60,6 +64,8 @@ class PagoServicioResponse {
       codigoGestoPago: json['codigoGestoPago'] as String?,
       mensajeGestoPago: json['mensajeGestoPago'] as String?,
       folioGestoPago: json['folioGestoPago'] as String?,
+      idTransaccionProveedor: json['idTransaccionProveedor'] as String?,
+      codigoUpc: json['codigoUpc'] as String?,
       autorizacionGestoPago: json['autorizacionGestoPago'] as String?,
       ticket: json['ticket'] as String?,
       fecha: json['fecha'] as String?,
@@ -83,6 +89,8 @@ class PagoServicioResponse {
       'codigoGestoPago': codigoGestoPago,
       'mensajeGestoPago': mensajeGestoPago,
       'folioGestoPago': folioGestoPago,
+      'idTransaccionProveedor': idTransaccionProveedor,
+      'codigoUpc': codigoUpc,
       'autorizacionGestoPago': autorizacionGestoPago,
       'ticket': ticket,
       'fecha': fecha,

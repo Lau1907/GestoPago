@@ -48,6 +48,9 @@ public class GestoPagoProductoItem {
     @XmlAttribute(name = "tipoReferencia")
     private String tipoReferencia;
 
+    @XmlAttribute(name = "codigoUPC")
+    private String codigoUpc;
+
     @XmlElement(name = "legend")
     private String legend;
 }

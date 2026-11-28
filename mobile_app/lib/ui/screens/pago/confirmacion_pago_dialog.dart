@@ -61,12 +61,16 @@ class _ConfirmacionPagoDialogState extends State<ConfirmacionPagoDialog> {
 
       if (!mounted) return;
 
-      // ESTADO 1: COMPRA EXITOSA -> Navegar a ticket/comprobante oficial
-      if (pagoProvider.estado == EstadoPago.exitoso && response != null) {
-        // Actualizar cuentas en AuthProvider (saldo debitado)
-        context.read<AuthProvider>().cargarDatosClienteYCuentas();
-        // Recargar historial exclusivo de exitosas
-        context.read<HistorialProvider>().cargarHistorial();
+      // ESTADO 1 o 3: COMPRA EXITOSA o RECHAZADA POR PROVEEDOR -> Navegar a ticket/comprobante
+      if (response != null &&
+          (pagoProvider.estado == EstadoPago.exitoso ||
+              pagoProvider.estado == EstadoPago.rechazado)) {
+        if (pagoProvider.estado == EstadoPago.exitoso) {
+          // Actualizar cuentas en AuthProvider (saldo debitado)
+          context.read<AuthProvider>().cargarDatosClienteYCuentas();
+          // Recargar historial exclusivo de exitosas
+          context.read<HistorialProvider>().cargarHistorial();
+        }
 
         Navigator.pop(context); // Cerrar diálogo
         Navigator.push(

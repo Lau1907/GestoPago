@@ -18,16 +18,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   final _otpController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  @override
-  void initState() {
-    super.initState();
-    // Si en entorno de desarrollo el backend devuelve el OTP en la respuesta, auto-completar
-    final devOtp = context.read<AuthProvider>().temporalOtpForDev;
-    if (devOtp != null && devOtp.isNotEmpty) {
-      _otpController.text = devOtp;
-    }
-  }
-
   void _onVerificar() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -92,7 +82,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Hemos generado un código de 6 dígitos para:\n${widget.correo}',
+                  'Hemos enviado un código de 6 dígitos a:\n${widget.correo}\n\nRevisa tu bandeja de entrada o carpeta de spam para ingresarlo.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 14,
@@ -100,30 +90,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     height: 1.4,
                   ),
                 ),
-                const SizedBox(height: 20),
-
-                // Sugerencia visual en modo dev si el OTP está en memoria
-                if (authProvider.temporalOtpForDev != null)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade50,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.amber.shade300),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.info_outline, color: Colors.orange, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Código 2FA generado por backend: ${authProvider.temporalOtpForDev}',
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 const SizedBox(height: 24),
 
                 // Campo OTP de 6 dígitos

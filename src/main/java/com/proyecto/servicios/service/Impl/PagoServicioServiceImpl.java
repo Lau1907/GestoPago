@@ -79,9 +79,6 @@ public class PagoServicioServiceImpl implements PagoServicioService {
     @Value("${gestopago.auth.password:}")
     private String password;
 
-    @Value("${gestopago.mock.enabled:false}")
-    private boolean mockEnabled;
-
     public PagoServicioServiceImpl(CuentaRepository cuentaRepository,
                                   TransaccionPagoRepository transaccionPagoRepository,
                                   GestoPagoProductService gestoPagoProductService,
@@ -183,6 +180,7 @@ public class PagoServicioServiceImpl implements PagoServicioService {
                 .saldoAnterior(saldoAnterior)
                 .referenciaServicio(request.getReferencia())
                 .digitoVerificador(request.getDigitoVerificador())
+                .codigoUpc(productoCatalogo.getCodigoUpc())
                 .estatus(EstadoTransaccion.INICIADA)
                 .fechaCreacion(LocalDateTime.now())
                 .fechaActualizacion(LocalDateTime.now())
@@ -271,14 +269,21 @@ public class PagoServicioServiceImpl implements PagoServicioService {
         transaccion.setCodigoRespuestaGestoPago(codigoRespuesta);
         transaccion.setMensajeRespuestaGestoPago(textoRespuesta);
 
+        if (txResponse.getTransaccion() != null) {
+            GestoPagoTransaccionItem item = txResponse.getTransaccion();
+            transaccion.setFolioGestoPago(item.getFolio());
+            transaccion.setIdTransaccionProveedor(item.getIdTransaccion());
+            transaccion.setAutorizacionGestoPago(item.getAutorizacion());
+            transaccion.setTicketGestoPago(item.getTicket());
+        }
+
         // En GestoPago, el código "01" representa éxito
         if (!"01".equals(codigoRespuesta)) {
             log.warn("Transacción rechazada por GestoPago. Código: [{}], Mensaje: {}", codigoRespuesta, textoRespuesta);
             transaccion.setEstatus(EstadoTransaccion.FALLIDA);
-            transaccionPagoRepository.save(transaccion);
-            // Saldo permanece intacto
-            throw new ExternalIntegrationException(
-                    "GestoPago rechazó la transacción: " + textoRespuesta, HttpStatus.BAD_REQUEST);
+            transaccion = transaccionPagoRepository.save(transaccion);
+            // Saldo permanece intacto y se retorna el comprobante con estado FALLIDA
+            return mapToResponse(transaccion);
         }
 
         // 8. Débito Efectivo de la Cuenta Bancaria y Finalización Exitosa
@@ -288,13 +293,6 @@ public class PagoServicioServiceImpl implements PagoServicioService {
 
         transaccion.setEstatus(EstadoTransaccion.EXITOSA);
         transaccion.setSaldoPosterior(nuevoSaldo);
-
-        if (txResponse.getTransaccion() != null) {
-            GestoPagoTransaccionItem item = txResponse.getTransaccion();
-            transaccion.setFolioGestoPago(item.getFolio());
-            transaccion.setAutorizacionGestoPago(item.getAutorizacion());
-            transaccion.setTicketGestoPago(item.getTicket());
-        }
 
         transaccion = transaccionPagoRepository.save(transaccion);
         log.info("Pago procesado exitosamente. IdempotencyKey={}, FolioGestoPago={}, NuevoSaldo={}",
@@ -356,52 +354,10 @@ public class PagoServicioServiceImpl implements PagoServicioService {
                     tipoFront,
                     idServicio
             );
-        } catch (FeignException.Unauthorized e) {
-            if (mockEnabled) {
-                log.warn("Error 401 en sendTx.do de GestoPago. Modo Mock activo: interceptando y retornando transacción simulada exitosa");
-                return generarXmlSimuladoExitoso(referencia);
-            }
-            throw e;
-        } catch (RetryableException e) {
-            if (mockEnabled) {
-                log.warn("Timeout en sendTx.do de GestoPago. Modo Mock activo: interceptando y retornando transacción simulada exitosa");
-                return generarXmlSimuladoExitoso(referencia);
-            }
-            throw e;
-        } catch (FeignException e) {
-            if (mockEnabled) {
-                log.warn("Error Feign ({}) en sendTx.do de GestoPago. Modo Mock activo: interceptando y retornando transacción simulada exitosa", e.status());
-                return generarXmlSimuladoExitoso(referencia);
-            }
-            throw e;
-        } catch (Exception e) {
-            if (mockEnabled) {
-                log.warn("Error de conexión en sendTx.do de GestoPago: {}. Modo Mock activo: interceptando y retornando transacción simulada exitosa", e.getMessage());
-                return generarXmlSimuladoExitoso(referencia);
-            }
-            throw e;
         } finally {
             long duration = System.currentTimeMillis() - startTime;
             log.info("Fin de la invocación externa a sendTx.do en {} ms", duration);
         }
-    }
-
-    private String generarXmlSimuladoExitoso(String referencia) {
-        long randomFolio = Math.abs(referencia.hashCode()) % 1000000L + 100000L;
-        return String.format("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <RESPONSE>
-                    <MENSAJE>
-                        <CODIGO>01</CODIGO>
-                        <TEXTO>Transaccion aprobada exitosamente (Modo Simulado)</TEXTO>
-                    </MENSAJE>
-                    <TRANSACCION>
-                        <FOLIO>MOCK-%d</FOLIO>
-                        <AUTORIZACION>AUTH-%d</AUTORIZACION>
-                        <TICKET>RECIBO-MOCK-%s</TICKET>
-                    </TRANSACCION>
-                </RESPONSE>
-                """, randomFolio, randomFolio + 777L, referencia);
     }
 
     @Override
@@ -440,11 +396,6 @@ public class PagoServicioServiceImpl implements PagoServicioService {
             return fallbackBearerToken;
         }
 
-        if (mockEnabled) {
-            log.info("Modo Mock activo: utilizando token simulado para pago");
-            return "mock-gestopago-jwt-token-distribuidor-" + idDistribuidor;
-        }
-
         log.info("No se encontró token activo en BD para pago. Intentando renovación de token...");
         try {
             gestoPagoTokenService.renovarToken();
@@ -454,10 +405,6 @@ public class PagoServicioServiceImpl implements PagoServicioService {
             }
         } catch (Exception e) {
             log.error("Error al intentar renovar token de GestoPago: {}", e.getMessage());
-        }
-
-        if (mockEnabled) {
-            return "mock-gestopago-jwt-token-distribuidor-" + idDistribuidor;
         }
 
         throw new ExternalIntegrationException("No se dispone de un Bearer Token válido para procesar el pago", HttpStatus.UNAUTHORIZED);
@@ -507,6 +454,8 @@ public class PagoServicioServiceImpl implements PagoServicioService {
                 .codigoGestoPago(tx.getCodigoRespuestaGestoPago())
                 .mensajeGestoPago(tx.getMensajeRespuestaGestoPago())
                 .folioGestoPago(tx.getFolioGestoPago())
+                .idTransaccionProveedor(tx.getIdTransaccionProveedor())
+                .codigoUpc(tx.getCodigoUpc())
                 .autorizacionGestoPago(tx.getAutorizacionGestoPago())
                 .ticket(tx.getTicketGestoPago())
                 .fecha(tx.getFechaCreacion())

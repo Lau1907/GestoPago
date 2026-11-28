@@ -11,6 +11,7 @@ import com.proyecto.servicios.model.onboarding.LoginResponse;
 import com.proyecto.servicios.model.onboarding.Verificacion2faRequest;
 import com.proyecto.servicios.repositorys.onboarding.UsuarioRepository;
 import com.proyecto.servicios.service.AuthService;
+import com.proyecto.servicios.service.EmailService;
 import com.proyecto.servicios.service.OtpService;
 import com.proyecto.servicios.service.SesionService;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final OtpService otpService;
     private final SesionService sesionService;
+    private final EmailService emailService;
 
     // Constructor primario usado por Spring Boot para inyección completa de dependencias
     @Autowired
@@ -39,19 +41,21 @@ public class AuthServiceImpl implements AuthService {
                            PasswordEncoder passwordEncoder,
                            JwtTokenProvider jwtTokenProvider,
                            OtpService otpService,
-                           SesionService sesionService) {
+                           SesionService sesionService,
+                           @Autowired(required = false) EmailService emailService) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.otpService = otpService;
         this.sesionService = sesionService;
+        this.emailService = emailService;
     }
 
     // Constructor secundario para compatibilidad estricta con pruebas unitarias heredadas
     public AuthServiceImpl(UsuarioRepository usuarioRepository,
                            PasswordEncoder passwordEncoder,
                            JwtTokenProvider jwtTokenProvider) {
-        this(usuarioRepository, passwordEncoder, jwtTokenProvider, null, null);
+        this(usuarioRepository, passwordEncoder, jwtTokenProvider, null, null, null);
     }
 
     @Override
@@ -86,9 +90,12 @@ public class AuthServiceImpl implements AuthService {
 
         if (requiere2Fa) {
             String codigoOtp = otpService.generarCodigoOtp(usuario, tipoDispositivo);
+            if (emailService != null) {
+                emailService.enviarCodigoOtp(usuario.getCorreo(), codigoOtp, 5);
+            }
             String preAuthToken = jwtTokenProvider.generatePreAuthToken(usuario.getId(), usuario.getCorreo(), tipoDispositivo.name());
 
-            log.info("2FA requerido para usuario ID: {}. Código OTP generado y token temporal emitido.", usuario.getId());
+            log.info("2FA requerido para usuario ID: {}. Código OTP enviado por correo y token temporal emitido.", usuario.getId());
 
             return LoginResponse.builder()
                     .token(preAuthToken)
@@ -96,9 +103,8 @@ public class AuthServiceImpl implements AuthService {
                     .tipo("PRE_AUTH")
                     .expiraEn(300000L) // 5 minutos
                     .requiere2FA(true)
-                    .codigoOtp(codigoOtp)
                     .dispositivo(tipoDispositivo.name())
-                    .mensaje("Se requiere validación de 2FA. Ingrese el código OTP de 6 dígitos para completar el acceso.")
+                    .mensaje("Se requiere validación de 2FA. Hemos enviado un código OTP de 6 dígitos a su correo electrónico.")
                     .build();
         }
 

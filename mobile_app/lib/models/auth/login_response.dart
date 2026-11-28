@@ -4,7 +4,6 @@ class LoginResponse {
   final int? expiraEn;
   final bool requiere2FA;
   final String? tokenTemporal;
-  final String? codigoOtp;
   final String? dispositivo;
   final String? mensaje;
 
@@ -14,7 +13,6 @@ class LoginResponse {
     this.expiraEn,
     this.requiere2FA = false,
     this.tokenTemporal,
-    this.codigoOtp,
     this.dispositivo,
     this.mensaje,
   });
@@ -26,7 +24,6 @@ class LoginResponse {
       expiraEn: json['expiraEn'] as int?,
       requiere2FA: json['requiere2FA'] == true,
       tokenTemporal: json['tokenTemporal'] as String?,
-      codigoOtp: json['codigoOtp'] as String?,
       dispositivo: json['dispositivo'] as String?,
       mensaje: json['mensaje'] as String?,
     );

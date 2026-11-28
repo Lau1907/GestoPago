@@ -27,6 +27,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,6 +47,9 @@ class AuthServiceImplTest {
 
     @Mock
     private SesionService sesionService;
+
+    @Mock
+    private EmailService emailService;
 
     @InjectMocks
     private AuthServiceImpl authService;
@@ -106,8 +110,8 @@ class AuthServiceImplTest {
         assertTrue(response.getRequiere2FA());
         assertEquals("PRE_AUTH", response.getTipo());
         assertEquals("pre_auth_token_mock", response.getToken());
-        assertEquals("654321", response.getCodigoOtp());
         assertEquals("WEB", response.getDispositivo());
+        verify(emailService).enviarCodigoOtp("usuario.prueba@example.com", "654321", 5);
     }
 
     @Test

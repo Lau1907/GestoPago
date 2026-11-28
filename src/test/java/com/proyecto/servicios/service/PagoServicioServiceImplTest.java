@@ -393,18 +393,27 @@ class PagoServicioServiceImplTest {
                         <CODIGO>02</CODIGO>
                         <TEXTO>Referencia de servicio no valida o contrato vencido</TEXTO>
                     </MENSAJE>
+                    <TRANSACCION>
+                        <ID_TRANSACCION>PROV-999</ID_TRANSACCION>
+                        <FOLIO>GP-REJ-01</FOLIO>
+                        <AUTORIZACION>-1</AUTORIZACION>
+                    </TRANSACCION>
                 </RESPONSE>
                 """;
 
         when(gestoPagoPaymentClient.sendTx(anyString(), anyInt(), anyString(), anyString(), any(), any(), any()))
                 .thenReturn(xmlRechazo);
 
-        // Act & Assert
-        ExternalIntegrationException ex = assertThrows(ExternalIntegrationException.class,
-                () -> pagoServicioService.pagarServicio(requestValido));
+        // Act
+        PagoServicioResponse response = pagoServicioService.pagarServicio(requestValido);
 
-        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
-        assertTrue(ex.getMessage().contains("Referencia de servicio no valida"));
+        // Assert
+        assertNotNull(response);
+        assertEquals("FALLIDA", response.getEstado());
+        assertEquals("02", response.getCodigoGestoPago());
+        assertEquals("Referencia de servicio no valida o contrato vencido", response.getMensajeGestoPago());
+        assertEquals("-1", response.getAutorizacionGestoPago());
+        assertEquals("PROV-999", response.getIdTransaccionProveedor());
 
         // El saldo permanece intacto
         assertEquals(new BigDecimal("1000.00"), cuentaDummy.getSaldo());
@@ -471,10 +480,9 @@ class PagoServicioServiceImplTest {
     }
 
     @Test
-    @DisplayName("Modo Mock: Debe procesar el pago exitosamente y debitar saldo simulando respuesta sendTx ante 401")
-    void pagarServicio_ModoMockActivo_ProcesaPagoExitosamente() {
+    @DisplayName("Sin modo mock: Ante 401 de sendTx debe marcar FALLIDA, no debitar saldo y lanzar ExternalIntegrationException")
+    void pagarServicio_Error401SendTx_MarcaFallidaYNoDebita() {
         // Arrange
-        ReflectionTestUtils.setField(pagoServicioService, "mockEnabled", true);
         ReflectionTestUtils.setField(pagoServicioService, "password", "");
         ReflectionTestUtils.setField(pagoServicioService, "idDistribuidor", 83);
         ReflectionTestUtils.setField(pagoServicioService, "codigoDispositivo", "GPS83-TPV-17");
@@ -490,17 +498,13 @@ class PagoServicioServiceImplTest {
         feign.FeignException.Unauthorized unauthorized = new feign.FeignException.Unauthorized("Unauthorized", feignRequest, null, new java.util.HashMap<>());
         when(gestoPagoPaymentClient.sendTx(any(), any(), any(), any(), any(), any(), any())).thenThrow(unauthorized);
 
-        // Act
-        PagoServicioResponse response = pagoServicioService.pagarServicio(requestValido);
+        // Act & Assert
+        ExternalIntegrationException ex = assertThrows(ExternalIntegrationException.class,
+                () -> pagoServicioService.pagarServicio(requestValido));
 
-        // Assert
-        assertNotNull(response);
-        assertEquals("EXITOSA", response.getEstado());
-        assertEquals("01", response.getCodigoGestoPago());
-        assertNotNull(response.getFolioGestoPago());
-        assertTrue(response.getFolioGestoPago().startsWith("MOCK-"));
-        assertEquals(new BigDecimal("990.00"), cuentaDummy.getSaldo());
-        verify(cuentaRepository, times(1)).save(cuentaDummy);
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatus());
+        assertEquals(new BigDecimal("1000.00"), cuentaDummy.getSaldo());
+        verify(cuentaRepository, never()).save(cuentaDummy);
         verify(gestoPagoPaymentClient, times(1)).sendTx(any(), any(), any(), any(), any(), any(), any());
     }
 }

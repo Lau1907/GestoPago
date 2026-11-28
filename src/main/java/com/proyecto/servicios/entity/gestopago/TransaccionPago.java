@@ -77,6 +77,12 @@ public class TransaccionPago {
     @Column(name = "folio_gestopago", length = 50)
     private String folioGestoPago;
 
+    @Column(name = "id_transaccion_proveedor", length = 50)
+    private String idTransaccionProveedor;
+
+    @Column(name = "codigo_upc", length = 50)
+    private String codigoUpc;
+
     @Column(name = "autorizacion_gestopago", length = 50)
     private String autorizacionGestoPago;
 

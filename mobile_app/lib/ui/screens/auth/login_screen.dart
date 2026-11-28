@@ -7,6 +7,7 @@ import '../../../providers/config_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import 'otp_verification_screen.dart';
+import 'registro_cliente_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -221,6 +222,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: AppTheme.textPrimary,
                     ),
                   ),
+                  const SizedBox(height: 12),
+OutlinedButton(
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const RegistroClienteScreen(),
+      ),
+    );
+  },
+  child: const Text('¿No tienes cuenta? Regístrate'),
+),
                   const SizedBox(height: 6),
                   const Text(
                     'Canal Móvil Seguro (Sesión Única)',

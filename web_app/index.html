@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GestoPago - Banca Digital Web</title>
   <link rel="stylesheet" href="css/styles.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💳</text></svg>">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💳</text></svg>">
 </head>
+
 <body>
 
   <!-- =========================================================================
@@ -47,7 +50,7 @@
         <div class="auth-icon-circle">🔐</div>
         <h1 class="auth-title">Iniciar Sesión</h1>
         <p class="auth-subtitle">Acceso exclusivo a la Plataforma Web de Pagos</p>
-        
+
         <div class="channel-pill">
           Dispositivo: <strong>WEB</strong> • <span id="current-backend-url-label">http://localhost:8080</span>
         </div>
@@ -57,14 +60,17 @@
         <form id="login-form">
           <div class="form-group">
             <label for="login-email">Correo Electrónico</label>
-            <input type="email" id="login-email" class="form-input" required placeholder="usuario@correo.com" autocomplete="email">
+            <input type="email" id="login-email" class="form-input" required placeholder="usuario@correo.com"
+              autocomplete="email">
           </div>
 
           <div class="form-group">
             <label for="login-password">Contraseña</label>
             <div class="password-input-wrapper">
-              <input type="password" id="login-password" class="form-input" required placeholder="••••••••" autocomplete="current-password">
-              <button type="button" class="btn-toggle-password" onclick="Auth.togglePasswordVisibility()" title="Mostrar u ocultar contraseña">
+              <input type="password" id="login-password" class="form-input" required placeholder="••••••••"
+                autocomplete="current-password">
+              <button type="button" class="btn-toggle-password" onclick="Auth.togglePasswordVisibility()"
+                title="Mostrar u ocultar contraseña">
                 <span id="password-toggle-icon">👁️</span>
               </button>
             </div>
@@ -73,35 +79,342 @@
           <button type="submit" id="btn-login-submit" class="btn-primary" style="margin-top: 10px;">
             <span>Ingresar a la Plataforma</span> ➔
           </button>
+          <button type="button" class="btn-secondary" style="width: 100%; margin-top: 12px;"
+            onclick="Auth.mostrarPantallaRegistro()">
+            Crear Cuenta / Registrar Cliente
+          </button>
         </form>
 
         <p style="font-size: 11px; color: var(--text-secondary); margin-top: 20px; line-height: 1.4;">
-          * Control de Sesión Única activo: Si inicia sesión en la aplicación móvil, esta sesión web será invalidada automáticamente por seguridad.
+          * Control de Sesión Única activo: Si inicia sesión en la aplicación móvil, esta sesión web será invalidada
+          automáticamente por seguridad.
         </p>
       </div>
     </div>
 
+    <!-- REGISTRO DE CLIENTE (WIZARD KYC 3 PASOS) -->
+    <div id="auth-register-view" class="kyc-wrapper" style="display: none;">
+      <div class="kyc-container">
+        <!-- Encabezado -->
+        <div class="kyc-topbar">
+          <button type="button" class="kyc-back-btn" onclick="Auth.mostrarPantallaLogin()">
+            ← Solicitud de Apertura Bancaria
+          </button>
+          <div class="kyc-header-brand">
+            <div class="kyc-bank-icon">🏦</div>
+            <div>
+              <h1 class="kyc-title">Apertura de Cuenta Digital</h1>
+              <p class="kyc-subtitle">Proceso de Onboarding Oficial KYC</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stepper visual de 3 pasos -->
+        <div class="kyc-stepper" id="kyc-stepper">
+          <div class="kyc-step-item active" id="kyc-step-indicator-1">
+            <div class="kyc-step-circle" id="kyc-step-circle-1">1</div>
+            <span class="kyc-step-label">1 Personal</span>
+          </div>
+          <div class="kyc-step-line" id="kyc-step-line-1"></div>
+          <div class="kyc-step-item" id="kyc-step-indicator-2">
+            <div class="kyc-step-circle" id="kyc-step-circle-2">2</div>
+            <span class="kyc-step-label">2 Identidad</span>
+          </div>
+          <div class="kyc-step-line" id="kyc-step-line-2"></div>
+          <div class="kyc-step-item" id="kyc-step-indicator-3">
+            <div class="kyc-step-circle" id="kyc-step-circle-3">3</div>
+            <span class="kyc-step-label">3 Domicilio</span>
+          </div>
+        </div>
+
+        <div class="kyc-body">
+          <div id="register-error" class="kyc-error-banner" style="display: none;"></div>
+
+          <form id="register-form" novalidate>
+            <!-- PASO 1 DE 3: DATOS PERSONALES -->
+            <div id="kyc-step-1" class="kyc-step-panel">
+              <div class="kyc-step-heading">Paso 1 de 3: Datos Personales</div>
+
+              <div class="kyc-row-2">
+                <div class="form-group">
+                  <label for="register-primerNombre">Primer Nombre *</label>
+                  <input type="text" id="register-primerNombre" class="form-input" placeholder="Juan" />
+                </div>
+                <div class="form-group">
+                  <label for="register-segundoNombre">Segundo Nombre</label>
+                  <input type="text" id="register-segundoNombre" class="form-input" placeholder="Carlos (opcional)" />
+                </div>
+              </div>
+
+              <div class="kyc-row-2">
+                <div class="form-group">
+                  <label for="register-apellidoPaterno">Apellido Paterno *</label>
+                  <input type="text" id="register-apellidoPaterno" class="form-input" placeholder="Gómez" />
+                </div>
+                <div class="form-group">
+                  <label for="register-apellidoMaterno">Apellido Materno *</label>
+                  <input type="text" id="register-apellidoMaterno" class="form-input" placeholder="López" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="register-fechaNacimiento">Fecha de Nacimiento (Mayor de 18 años) *</label>
+                <input type="date" id="register-fechaNacimiento" class="form-input" />
+              </div>
+
+              <div class="kyc-row-2">
+                <div class="form-group">
+                  <label for="register-sexo">Sexo *</label>
+                  <select id="register-sexo" class="form-input">
+                    <option value="">Selecciona</option>
+                    <option value="H">Hombre</option>
+                    <option value="M">Mujer</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="register-estadoCivil">Estado Civil *</label>
+                  <select id="register-estadoCivil" class="form-input">
+                    <option value="">Selecciona</option>
+                    <option value="S">Soltero(a)</option>
+                    <option value="C">Casado(a)</option>
+                    <option value="D">Divorciado(a)</option>
+                    <option value="V">Viudo(a)</option>
+                    <option value="U">Unión Libre</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="kyc-actions">
+                <button type="button" class="kyc-btn-primary" onclick="Auth.siguientePasoRegistro(1)">
+                  Continuar a Identidad Oficial →
+                </button>
+              </div>
+            </div>
+
+            <!-- PASO 2 DE 3: IDENTIDAD FISCAL Y CONTACTO -->
+            <div id="kyc-step-2" class="kyc-step-panel" style="display: none;">
+              <div class="kyc-step-heading">Paso 2 de 3: Identidad Fiscal y Contacto</div>
+
+              <div class="kyc-row-2">
+                <div class="form-group">
+                  <label for="register-curp">CURP (18 caracteres) *</label>
+                  <input type="text" id="register-curp" class="form-input" maxlength="18"
+                    placeholder="GOGL800101HMNLRR09" oninput="this.value = this.value.toUpperCase()" />
+                </div>
+                <div class="form-group">
+                  <label for="register-rfc">RFC (12-13 car.) *</label>
+                  <input type="text" id="register-rfc" class="form-input" maxlength="13"
+                    placeholder="GOGJ800101ABC" oninput="this.value = this.value.toUpperCase()" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="register-telefonoMovil">Teléfono Móvil (10 dígitos) *</label>
+                <input type="tel" id="register-telefonoMovil" class="form-input" maxlength="10"
+                  placeholder="5512345678" oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
+              </div>
+
+              <div class="form-group">
+                <label for="register-correo">Correo Electrónico *</label>
+                <input type="email" id="register-correo" class="form-input" placeholder="usuario@correo.com" />
+              </div>
+
+              <div class="kyc-row-2">
+                <div class="form-group">
+                  <label for="register-ocupacion">Ocupación *</label>
+                  <select id="register-ocupacion" class="form-input">
+                    <option value="">Selecciona</option>
+                    <option value="Empleado">Empleado</option>
+                    <option value="Independiente / Freelancer">Independiente / Freelancer</option>
+                    <option value="Empresario">Empresario</option>
+                    <option value="Estudiante">Estudiante</option>
+                    <option value="Comerciante">Comerciante</option>
+                    <option value="Profesionista">Profesionista</option>
+                    <option value="Jubilado">Jubilado</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="register-ingresoMensual">Rango de Ingreso *</label>
+                  <select id="register-ingresoMensual" class="form-input">
+                    <option value="">Selecciona</option>
+                    <option value="8000.00">Menos de $10,000</option>
+                    <option value="15000.00">$10,000 - $20,000</option>
+                    <option value="30000.00">$20,001 - $40,000</option>
+                    <option value="50000.00">Más de $40,000</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="kyc-actions">
+                <button type="button" class="kyc-btn-secondary" onclick="Auth.irAPasoRegistro(1)">
+                  Atrás
+                </button>
+                <button type="button" class="kyc-btn-primary" onclick="Auth.siguientePasoRegistro(2)">
+                  Continuar a Domicilio →
+                </button>
+              </div>
+            </div>
+
+            <!-- PASO 3 DE 3: DOMICILIO Y ACCESO -->
+            <div id="kyc-step-3" class="kyc-step-panel" style="display: none;">
+              <div class="kyc-step-heading">Paso 3 de 3: Domicilio y Acceso</div>
+
+              <div class="kyc-row-2">
+                <div class="form-group">
+                  <label for="register-codigoPostal">C.P. (5 dígitos) *</label>
+                  <input type="text" id="register-codigoPostal" class="form-input" maxlength="5"
+                    placeholder="01234" oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
+                </div>
+                <div class="form-group">
+                  <label for="register-estado">Estado *</label>
+                  <select id="register-estado" class="form-input">
+                    <option value="">Selecciona un estado</option>
+                    <option value="Aguascalientes">Aguascalientes</option>
+                    <option value="Baja California">Baja California</option>
+                    <option value="Baja California Sur">Baja California Sur</option>
+                    <option value="Campeche">Campeche</option>
+                    <option value="Chiapas">Chiapas</option>
+                    <option value="Chihuahua">Chihuahua</option>
+                    <option value="Ciudad de México">Ciudad de México</option>
+                    <option value="Coahuila">Coahuila</option>
+                    <option value="Colima">Colima</option>
+                    <option value="Durango">Durango</option>
+                    <option value="Estado de México">Estado de México</option>
+                    <option value="Guanajuato">Guanajuato</option>
+                    <option value="Guerrero">Guerrero</option>
+                    <option value="Hidalgo">Hidalgo</option>
+                    <option value="Jalisco">Jalisco</option>
+                    <option value="Michoacán">Michoacán</option>
+                    <option value="Morelos">Morelos</option>
+                    <option value="Nayarit">Nayarit</option>
+                    <option value="Nuevo León">Nuevo León</option>
+                    <option value="Oaxaca">Oaxaca</option>
+                    <option value="Puebla">Puebla</option>
+                    <option value="Querétaro">Querétaro</option>
+                    <option value="Quintana Roo">Quintana Roo</option>
+                    <option value="San Luis Potosí">San Luis Potosí</option>
+                    <option value="Sinaloa">Sinaloa</option>
+                    <option value="Sonora">Sonora</option>
+                    <option value="Tabasco">Tabasco</option>
+                    <option value="Tamaulipas">Tamaulipas</option>
+                    <option value="Tlaxcala">Tlaxcala</option>
+                    <option value="Veracruz">Veracruz</option>
+                    <option value="Yucatán">Yucatán</option>
+                    <option value="Zacatecas">Zacatecas</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="kyc-row-2">
+                <div class="form-group">
+                  <label for="register-municipio">Alcaldía / Municipio *</label>
+                  <input type="text" id="register-municipio" class="form-input" placeholder="Benito Juárez" />
+                </div>
+                <div class="form-group">
+                  <label for="register-colonia">Colonia *</label>
+                  <input type="text" id="register-colonia" class="form-input" placeholder="Del Valle" />
+                </div>
+              </div>
+
+              <div class="kyc-row-3">
+                <div class="form-group">
+                  <label for="register-calle">Calle *</label>
+                  <input type="text" id="register-calle" class="form-input" placeholder="Av. Insurgentes Sur" />
+                </div>
+                <div class="form-group">
+                  <label for="register-numeroExterior">Num. Ext. *</label>
+                  <input type="text" id="register-numeroExterior" class="form-input" placeholder="123" />
+                </div>
+                <div class="form-group">
+                  <label for="register-numeroInterior">Num. Int.</label>
+                  <input type="text" id="register-numeroInterior" class="form-input" placeholder="Opcional" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="register-password">Contraseña de Acceso (8-12 car.) *</label>
+                <div class="password-input-wrapper">
+                  <input type="password" id="register-password" class="form-input" maxlength="12"
+                    placeholder="••••••••" oninput="Auth.actualizarRequisitosPassword(this.value)" />
+                  <button type="button" class="btn-toggle-password"
+                    onclick="Auth.toggleRegisterPasswordVisibility('register-password', 'reg-pass-toggle-icon')"
+                    title="Mostrar u ocultar contraseña">
+                    <span id="reg-pass-toggle-icon">👁️</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Tarjeta de requisitos de seguridad en tiempo real -->
+              <div class="kyc-pwd-card">
+                <div class="kyc-pwd-card-title">Requisitos de seguridad</div>
+                <div class="kyc-pwd-grid">
+                  <div class="kyc-pwd-req" id="req-len">
+                    <span class="kyc-pwd-dot">✓</span>
+                    <span>8-12 caracteres</span>
+                  </div>
+                  <div class="kyc-pwd-req" id="req-upper">
+                    <span class="kyc-pwd-dot">✓</span>
+                    <span>Mayúscula (A-Z)</span>
+                  </div>
+                  <div class="kyc-pwd-req" id="req-lower">
+                    <span class="kyc-pwd-dot">✓</span>
+                    <span>Minúscula (a-z)</span>
+                  </div>
+                  <div class="kyc-pwd-req" id="req-digit">
+                    <span class="kyc-pwd-dot">✓</span>
+                    <span>Número (0-9)</span>
+                  </div>
+                  <div class="kyc-pwd-req" id="req-symbol">
+                    <span class="kyc-pwd-dot">✓</span>
+                    <span>Símbolo (@,#,$, etc.)</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="register-confirmPassword">Confirmar Contraseña *</label>
+                <div class="password-input-wrapper">
+                  <input type="password" id="register-confirmPassword" class="form-input" maxlength="12"
+                    placeholder="••••••••" />
+                  <button type="button" class="btn-toggle-password"
+                    onclick="Auth.toggleRegisterPasswordVisibility('register-confirmPassword', 'reg-confirm-toggle-icon')"
+                    title="Mostrar u ocultar contraseña">
+                    <span id="reg-confirm-toggle-icon">👁️</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="kyc-actions">
+                <button type="button" class="kyc-btn-secondary" onclick="Auth.irAPasoRegistro(2)">
+                  Atrás
+                </button>
+                <button type="submit" id="btn-register-submit" class="kyc-btn-primary">
+                  Solicitar Apertura Bancaria
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
     <!-- PANTALLA 2FA (OTP 6 DÍGITOS) -->
     <div id="auth-2fa-view" class="auth-wrapper" style="display: none;">
       <div class="auth-card">
         <div class="auth-icon-circle" style="color: var(--accent); background: rgba(0, 168, 107, 0.1);">🛡️</div>
         <h1 class="auth-title">Verificación 2FA</h1>
         <p class="auth-subtitle">
-          Ingrese el código numérico de 6 dígitos emitido para:<br>
-          <strong id="otp-user-email">usuario@correo.com</strong>
+          Hemos enviado un código de verificación de 6 dígitos a tu correo electrónico:<br>
+          <strong id="otp-user-email">usuario@correo.com</strong><br>
+          <span style="font-size: 12px; color: var(--text-secondary);">Revisa tu bandeja de entrada o carpeta de spam.</span>
         </p>
-
-        <!-- Banner DEV si el backend retorna el OTP en la respuesta -->
-        <div id="otp-dev-banner" style="display: none; background: #FFFBEB; border: 1px solid #FCD34D; border-radius: 8px; padding: 10px; margin-bottom: 16px; font-size: 13px; color: #92400E;">
-          🔑 Código OTP generado por el backend: <strong id="otp-dev-code" style="font-size: 15px;"></strong>
-        </div>
 
         <div id="otp-error" class="status-banner rejected" style="display: none; margin-bottom: 16px;"></div>
 
         <form id="otp-form">
           <div class="form-group" style="text-align: center;">
             <label for="otp-code">Código de Seguridad (6 dígitos)</label>
-            <input type="text" id="otp-code" class="form-input otp-input" maxlength="6" pattern="[0-9]{6}" required placeholder="000000" autocomplete="off">
+            <input type="text" id="otp-code" class="form-input otp-input" maxlength="6" pattern="[0-9]{6}" required
+              placeholder="000000" autocomplete="off">
           </div>
 
           <button type="submit" id="btn-otp-submit" class="btn-primary" style="margin-top: 10px;">
@@ -141,20 +454,23 @@
         <div class="search-filter-bar">
           <div class="search-input-wrapper">
             <span class="search-icon">🔍</span>
-            <input type="text" id="search-catalog" placeholder="Buscar por servicio (Agua, Luz, Teléfono, Gas) o producto...">
+            <input type="text" id="search-catalog"
+              placeholder="Buscar por servicio (Agua, Luz, Teléfono, Gas) o producto...">
           </div>
           <div class="category-chips" id="category-chips">
             <!-- Renderizado dinámico de chips -->
           </div>
         </div>
 
-        <div id="catalogo-loading" style="display: none; justify-content: center; align-items: center; padding: 40px; font-weight: 600; color: var(--primary);">
+        <div id="catalogo-loading"
+          style="display: none; justify-content: center; align-items: center; padding: 40px; font-weight: 600; color: var(--primary);">
           ⏳ Consultando catálogo oficial en GestoPago...
         </div>
 
         <div id="catalogo-error" class="status-banner rejected" style="display: none; margin-bottom: 20px;"></div>
 
-        <div id="catalogo-empty" style="display: none; text-align: center; padding: 60px 20px; color: var(--text-secondary);">
+        <div id="catalogo-empty"
+          style="display: none; text-align: center; padding: 60px 20px; color: var(--text-secondary);">
           <div style="font-size: 40px; margin-bottom: 10px;">🔍</div>
           <h3>No se encontraron productos</h3>
           <p>Intente con otro término de búsqueda o seleccione otra categoría.</p>
@@ -170,18 +486,22 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
           <div>
             <h2 style="font-size: 20px; font-weight: 700;">Historial de Compras Exitosas</h2>
-            <p style="font-size: 13px; color: var(--text-secondary);">Consulta tus comprobantes y tickets bancarios aprobados</p>
+            <p style="font-size: 13px; color: var(--text-secondary);">Consulta tus comprobantes y tickets bancarios
+              aprobados</p>
           </div>
           <button class="btn-secondary" onclick="Historial.cargar()" id="btn-refresh-history">
             🔄 Actualizar
           </button>
         </div>
 
-        <div id="history-empty" style="display: none; text-align: center; padding: 60px 20px; background: white; border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
+        <div id="history-empty"
+          style="display: none; text-align: center; padding: 60px 20px; background: white; border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
           <div style="font-size: 44px; margin-bottom: 12px;">🧾</div>
           <h3>Sin compras exitosas registradas</h3>
-          <p style="color: var(--text-secondary); margin-bottom: 18px;">Realiza tu primer pago de servicios desde el catálogo oficial.</p>
-          <button class="btn-primary" style="display: inline-flex; width: auto; padding: 8px 24px;" onclick="App.switchTab('catalogo')">
+          <p style="color: var(--text-secondary); margin-bottom: 18px;">Realiza tu primer pago de servicios desde el
+            catálogo oficial.</p>
+          <button class="btn-primary" style="display: inline-flex; width: auto; padding: 8px 24px;"
+            onclick="App.switchTab('catalogo')">
             Explorar Catálogo
           </button>
         </div>
@@ -195,28 +515,34 @@
       <section id="section-perfil" class="view-section">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
           <!-- Tarjeta de Perfil -->
-          <div style="background: white; padding: 24px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+          <div
+            style="background: white; padding: 24px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
             <h3 style="margin-bottom: 16px; font-size: 16px; color: var(--primary);">👤 Información del Titular</h3>
             <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px;">
               <div><strong>Nombre:</strong> <span id="profile-name">-</span></div>
               <div><strong>Correo:</strong> <span id="profile-email">-</span></div>
               <div><strong>Cuenta Bancaria:</strong> <span id="profile-account">-</span></div>
-              <div><strong>Saldo Actual:</strong> <span id="profile-balance" style="color: var(--accent); font-weight: bold;">$0.00 MXN</span></div>
+              <div><strong>Saldo Actual:</strong> <span id="profile-balance"
+                  style="color: var(--accent); font-weight: bold;">$0.00 MXN</span></div>
               <div><strong>Canal Activo:</strong> <span class="badge-success">WEB</span></div>
             </div>
           </div>
 
           <!-- Tarjeta de Conectividad con Backend Spring Boot -->
-          <div style="background: white; padding: 24px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
-            <h3 style="margin-bottom: 16px; font-size: 16px; color: var(--primary);">🌐 Conectividad del Backend REST</h3>
+          <div
+            style="background: white; padding: 24px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+            <h3 style="margin-bottom: 16px; font-size: 16px; color: var(--primary);">🌐 Conectividad del Backend REST
+            </h3>
             <div class="form-group">
               <label for="settings-base-url">Base URL del Servidor Spring Boot</label>
               <input type="text" id="settings-base-url" class="form-input" value="http://localhost:8080">
             </div>
 
             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;">
-              <button class="btn-secondary" onclick="App.setUrlPredefinida('http://localhost:8080')">localhost:8080</button>
-              <button class="btn-secondary" onclick="App.setUrlPredefinida('http://127.0.0.1:8080')">127.0.0.1:8080</button>
+              <button class="btn-secondary"
+                onclick="App.setUrlPredefinida('http://localhost:8080')">localhost:8080</button>
+              <button class="btn-secondary"
+                onclick="App.setUrlPredefinida('http://127.0.0.1:8080')">127.0.0.1:8080</button>
             </div>
 
             <button class="btn-primary" onclick="App.guardarConfiguracionUrl()">
@@ -245,7 +571,8 @@
         </p>
 
         <!-- Tarjeta de resumen de compra adaptable -->
-        <div style="background: var(--surface); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color); font-size: 13px; line-height: 1.8;">
+        <div
+          style="background: var(--surface); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color); font-size: 13px; line-height: 1.8;">
           <div style="display: flex; justify-content: space-between;">
             <span style="color: var(--text-secondary);">Servicio:</span>
             <strong id="modal-prod-servicio">-</strong>
@@ -281,11 +608,13 @@
           </div>
         </div>
 
-        <div id="modal-idempotency-key" style="font-size: 11px; color: var(--text-secondary); text-align: center; margin-top: 4px;"></div>
+        <div id="modal-idempotency-key"
+          style="font-size: 11px; color: var(--text-secondary); text-align: center; margin-top: 4px;"></div>
 
         <!-- BANNERS DE LOS 4 ESTADOS DE COMPRA -->
         <!-- ESTADO PROCESANDO -->
-        <div id="banner-processing" class="status-banner" style="display: none; background: #EBF8FF; color: #2B6CB0; border: 1px solid #BEE3F8;">
+        <div id="banner-processing" class="status-banner"
+          style="display: none; background: #EBF8FF; color: #2B6CB0; border: 1px solid #BEE3F8;">
           ⏳ Procesando con GestoPago y debitando cuenta bancaria...
         </div>
 
@@ -303,7 +632,8 @@
             <strong>⏱️ Compra en Revisión / Pendiente:</strong>
             <div id="banner-pending-msg" style="margin-top: 4px;"></div>
           </div>
-          <button class="btn-secondary" style="margin-top: 10px; align-self: flex-start; background: white;" onclick="Pago.reconsultarTransaccion()">
+          <button class="btn-secondary" style="margin-top: 10px; align-self: flex-start; background: white;"
+            onclick="Pago.reconsultarTransaccion()">
             🔄 Reconsultar Estado en Servidor
           </button>
         </div>
@@ -319,7 +649,8 @@
 
       <div class="modal-footer">
         <button class="btn-secondary" onclick="Pago.cerrarModal()">Cancelar</button>
-        <button id="btn-autorizar-debito" class="btn-primary" style="width: auto; padding: 10px 24px;" onclick="Pago.ejecutarPago()">
+        <button id="btn-autorizar-debito" class="btn-primary" style="width: auto; padding: 10px 24px;"
+          onclick="Pago.ejecutarPago()">
           Autorizar Débito Seguro
         </button>
       </div>
@@ -338,27 +669,33 @@
 
       <div class="modal-body">
         <div style="text-align: center; margin-bottom: 12px;">
-          <div style="font-size: 42px; color: var(--accent);">✅</div>
-          <h2 style="font-size: 20px; font-weight: 800; color: var(--text-primary);">¡Pago Aplicado con Éxito!</h2>
-          <div class="badge-success" style="margin-top: 6px;">TRANSACCIÓN EXITOSA</div>
+          <div id="ticket-service-logo" style="font-size: 40px; margin-bottom: 4px;">✅</div>
+          <h2 id="ticket-status-title" style="font-size: 20px; font-weight: 800; color: var(--text-primary);">¡Pago Aplicado con Éxito!</h2>
+          <div id="ticket-status-badge" class="badge-success" style="margin-top: 6px;">TRANSACCIÓN EXITOSA</div>
+          <div id="ticket-status-msg" style="font-size: 12px; color: var(--text-secondary); margin-top: 6px;"></div>
         </div>
 
         <div class="ticket-box">
           <div class="ticket-row"><span>SERVICIO:</span><strong id="ticket-servicio">-</strong></div>
           <div class="ticket-row"><span>PRODUCTO:</span><strong id="ticket-producto">-</strong></div>
-          <div class="ticket-row"><span>REFERENCIA:</span><strong id="ticket-referencia">-</strong></div>
-          <div class="ticket-row"><span>FOLIO GESTOPAGO:</span><strong id="ticket-folio">-</strong></div>
+          <div class="ticket-row"><span>REFERENCIA / TELÉFONO:</span><strong id="ticket-referencia">-</strong></div>
+          <div class="ticket-row"><span>CÓDIGO UPC:</span><strong id="ticket-upc">N/A</strong></div>
+          <div class="ticket-row"><span>FOLIO / ID TRANSACCIÓN:</span><strong id="ticket-folio">-</strong></div>
+          <div class="ticket-row"><span>ID TX PROVEEDOR:</span><strong id="ticket-provider-tx">-</strong></div>
           <div class="ticket-row"><span>AUTORIZACIÓN:</span><strong id="ticket-auth">-</strong></div>
-          <div class="ticket-row"><span>CUENTA DEBITADA:</span><strong id="ticket-cuenta">-</strong></div>
+          <div class="ticket-row"><span>CUENTA BANCARIA:</span><strong id="ticket-cuenta">-</strong></div>
           <div class="ticket-divider"></div>
-          <div class="ticket-row"><span>IMPORTE COBRADO:</span><strong id="ticket-monto" style="font-size: 14px; color: var(--accent);">-</strong></div>
+          <div class="ticket-row"><span>MONTO:</span><strong id="ticket-monto"
+              style="font-size: 14px; color: var(--accent);">-</strong></div>
           <div class="ticket-row"><span>SALDO ANTERIOR:</span><span id="ticket-saldo-ant">-</span></div>
           <div class="ticket-row"><span>SALDO NUEVO:</span><strong id="ticket-saldo-nuevo">-</strong></div>
           <div class="ticket-divider"></div>
           <div class="ticket-row"><span>FECHA/HORA:</span><span id="ticket-fecha">-</span></div>
-          <div class="ticket-row"><span>IDEMPOTENCY KEY:</span><span id="ticket-idempotencia" style="font-size: 10px;">-</span></div>
+          <div class="ticket-row"><span>IDEMPOTENCY KEY:</span><span id="ticket-idempotencia"
+              style="font-size: 10px;">-</span></div>
 
-          <div id="ticket-leyenda-box" style="display: none; margin-top: 10px; padding: 8px; background: #EDF2F7; border-radius: 4px; text-align: center;">
+          <div id="ticket-leyenda-box"
+            style="display: none; margin-top: 10px; padding: 8px; background: #EDF2F7; border-radius: 4px; text-align: center;">
             <span style="font-size: 10px; color: #4A5568;" id="ticket-leyenda-text"></span>
           </div>
         </div>
@@ -382,7 +719,8 @@
         <h2 style="font-size: 20px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px;">
           Sesión Cerrada en este Dispositivo
         </h2>
-        <p id="session-invalidated-msg" style="font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.5;">
+        <p id="session-invalidated-msg"
+          style="font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.5;">
           Se ha iniciado sesión desde otro dispositivo (plataforma Móvil) o la sesión ha expirado por seguridad.
         </p>
         <button class="btn-primary" style="width: 100%;" onclick="Auth.cerrarModalSesionInvalida()">
@@ -402,4 +740,5 @@
   <script src="js/auth.js"></script>
   <script src="js/app.js"></script>
 </body>
+
 </html>

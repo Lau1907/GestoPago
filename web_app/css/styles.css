@@ -771,3 +771,358 @@ body {
     padding: 24px 18px;
   }
 }
+
+/* =========================================================================
+   WIZARD KYC DE 3 PASOS (TEMA OSCURO MODERNO - APERTURA DIGITAL)
+   ========================================================================= */
+
+.kyc-wrapper {
+  width: 100%;
+  min-height: calc(100vh - 70px);
+  background: radial-gradient(circle at top right, #1e293b 0%, #0b1120 65%, #060913 100%);
+  padding: 28px 16px 48px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.kyc-container {
+  width: 100%;
+  max-width: 720px;
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.65);
+  overflow: hidden;
+  color: #f9fafb;
+}
+
+.kyc-topbar {
+  background: rgba(15, 23, 42, 0.9);
+  border-bottom: 1px solid #1f2937;
+  padding: 18px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.kyc-back-btn {
+  align-self: flex-start;
+  background: rgba(31, 41, 55, 0.8);
+  color: #93c5fd;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.kyc-back-btn:hover {
+  background: #1e293b;
+  color: #ffffff;
+  border-color: #3b82f6;
+}
+
+.kyc-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.kyc-bank-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.35);
+  flex-shrink: 0;
+}
+
+.kyc-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #f9fafb;
+  margin: 0;
+}
+
+.kyc-subtitle {
+  font-size: 12px;
+  color: #9ca3af;
+  margin: 2px 0 0;
+}
+
+/* Stepper visual de 3 pasos */
+.kyc-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 28px;
+  background: #0f172a;
+  border-bottom: 1px solid #1f2937;
+  gap: 8px;
+}
+
+.kyc-step-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.kyc-step-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  background: #1f2937;
+  color: #9ca3af;
+  border: 2px solid #374151;
+  transition: all 0.25s;
+}
+
+.kyc-step-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #9ca3af;
+  transition: color 0.25s;
+}
+
+.kyc-step-line {
+  flex: 1;
+  height: 2px;
+  background: #1f2937;
+  transition: background 0.25s;
+}
+
+.kyc-step-line.completed {
+  background: #10b981;
+}
+
+.kyc-step-item.active .kyc-step-circle {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.25);
+}
+
+.kyc-step-item.active .kyc-step-label {
+  color: #60a5fa;
+}
+
+.kyc-step-item.completed .kyc-step-circle {
+  background: #10b981;
+  color: #ffffff;
+  border-color: #34d399;
+}
+
+.kyc-step-item.completed .kyc-step-label {
+  color: #34d399;
+}
+
+/* Cuerpo del formulario KYC */
+.kyc-body {
+  padding: 24px 28px 28px;
+}
+
+.kyc-step-heading {
+  font-size: 16px;
+  font-weight: 700;
+  color: #f3f4f6;
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #1f2937;
+}
+
+.kyc-row-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.kyc-row-3 {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 14px;
+}
+
+.kyc-container .form-group {
+  margin-bottom: 16px;
+}
+
+.kyc-container .form-group label {
+  color: #d1d5db;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.kyc-container .form-input {
+  background: #1f2937;
+  border: 1px solid #374151;
+  color: #f9fafb;
+  border-radius: 10px;
+  padding: 11px 13px;
+  font-size: 14px;
+}
+
+.kyc-container .form-input::placeholder {
+  color: #6b7280;
+}
+
+.kyc-container .form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+.kyc-container select.form-input option {
+  background: #111827;
+  color: #f9fafb;
+}
+
+.kyc-error-banner {
+  background: rgba(220, 38, 38, 0.15);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  color: #fca5a5;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+  margin-bottom: 18px;
+  text-align: left;
+}
+
+/* Tarjeta de requisitos de contraseña */
+.kyc-pwd-card {
+  background: #0f172a;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.kyc-pwd-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #9ca3af;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.kyc-pwd-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.kyc-pwd-req {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #9ca3af;
+  transition: color 0.2s;
+}
+
+.kyc-pwd-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #1f2937;
+  border: 1px solid #4b5563;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: transparent;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.kyc-pwd-req.met {
+  color: #34d399;
+  font-weight: 600;
+}
+
+.kyc-pwd-req.met .kyc-pwd-dot {
+  background: #10b981;
+  border-color: #34d399;
+  color: #ffffff;
+}
+
+/* Acciones del wizard */
+.kyc-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.kyc-btn-primary {
+  flex: 1;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 13px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.kyc-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.kyc-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.kyc-btn-secondary {
+  background: #1f2937;
+  color: #e5e7eb;
+  border: 1px solid #374151;
+  border-radius: 10px;
+  padding: 13px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.kyc-btn-secondary:hover {
+  background: #374151;
+}
+
+@media (max-width: 640px) {
+  .kyc-row-2,
+  .kyc-row-3,
+  .kyc-pwd-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kyc-stepper {
+    padding: 16px;
+  }
+
+  .kyc-step-label {
+    display: none;
+  }
+
+  .kyc-body {
+    padding: 18px;
+  }
+}

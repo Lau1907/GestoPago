@@ -62,6 +62,12 @@ public class PagoServicioResponse {
     @Schema(description = "Folio asignado por GestoPago", example = "GP-20261027-001")
     private String folioGestoPago;
 
+    @Schema(description = "ID de transacción asignado por el proveedor GestoPago", example = "987654321")
+    private String idTransaccionProveedor;
+
+    @Schema(description = "Código UPC del producto si aplica", example = "7501234567890")
+    private String codigoUpc;
+
     @Schema(description = "Número de autorización de GestoPago", example = "AUTH987654")
     private String autorizacionGestoPago;
 

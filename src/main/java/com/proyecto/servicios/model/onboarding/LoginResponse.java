@@ -13,7 +13,6 @@ public class LoginResponse {
     private Long expiraEn;
     private Boolean requiere2FA;
     private String tokenTemporal;
-    private String codigoOtp;
     private String dispositivo;
     private String mensaje;
 }

@@ -148,9 +148,12 @@ const Pago = {
       else if (response && (response.estado === 'TIMEOUT_REVISION' || response.estado === 'INICIADA')) {
         this.mostrarBannerPendiente(response.mensajeGestoPago || 'La transacción se encuentra en estado de verificación con el proveedor.');
       } 
-      // 3. ESTADO COMPRA RECHAZADA (GestoPago devolvió código distinto de éxito)
-      else {
-        this.mostrarBannerRechazo(response.mensajeGestoPago || 'La transacción fue rechazada por el proveedor del servicio.');
+      // 3. ESTADO COMPRA RECHAZADA (GestoPago devolvió código distinto de 01)
+      else if (response && response.estado === 'FALLIDA') {
+        this.cerrarModal();
+        this.mostrarTicketComprobante(response);
+      } else {
+        this.mostrarBannerRechazo((response && response.mensajeGestoPago) || 'La transacción fue rechazada por el proveedor del servicio.');
       }
     } catch (err) {
       this.ocultarBannersEstado();
@@ -228,21 +231,69 @@ const Pago = {
   },
 
   /**
-   * Muestra el modal de comprobante/ticket bancario oficial
+   * Muestra el modal de comprobante/ticket bancario oficial (exitoso o rechazado)
    */
   mostrarTicketComprobante(compra) {
-    document.getElementById('ticket-folio').textContent = compra.folioGestoPago || `GP-${compra.idTransaccion || '001'}`;
-    document.getElementById('ticket-auth').textContent = compra.autorizacionGestoPago || 'AUTH-000';
+    if (!compra) return;
+    const esExitosa = compra.estado === 'EXITOSA' || compra.estado === 'APROBADA';
+    const logoEl = document.getElementById('ticket-service-logo');
+    const titleEl = document.getElementById('ticket-status-title');
+    const badgeEl = document.getElementById('ticket-status-badge');
+    const msgEl = document.getElementById('ticket-status-msg');
+    const montoEl = document.getElementById('ticket-monto');
+
+    const serviceIcon = (typeof Catalogo !== 'undefined' && Catalogo.obtenerIcono)
+      ? Catalogo.obtenerIcono(compra.servicio)
+      : (esExitosa ? '✅' : '❌');
+
+    if (logoEl) logoEl.textContent = serviceIcon;
+    if (titleEl) {
+      titleEl.textContent = esExitosa ? '¡Pago Aplicado con Éxito!' : 'Transacción Rechazada';
+    }
+    if (badgeEl) {
+      badgeEl.textContent = compra.estado || (esExitosa ? 'EXITOSA' : 'FALLIDA');
+      badgeEl.className = esExitosa ? 'badge-success' : 'status-badge rejected';
+      badgeEl.style.background = esExitosa ? '' : 'rgba(214, 48, 49, 0.12)';
+      badgeEl.style.color = esExitosa ? '' : 'var(--danger)';
+      badgeEl.style.display = 'inline-block';
+      badgeEl.style.padding = '4px 12px';
+      badgeEl.style.borderRadius = '20px';
+      badgeEl.style.fontWeight = '700';
+      badgeEl.style.fontSize = '12px';
+    }
+    if (msgEl) {
+      msgEl.textContent = compra.mensajeGestoPago
+        ? `${compra.codigoGestoPago ? `[${compra.codigoGestoPago}] ` : ''}${compra.mensajeGestoPago}`
+        : '';
+    }
+
+    document.getElementById('ticket-folio').textContent =
+      compra.folioGestoPago || (compra.idTransaccion ? `TX-${compra.idTransaccion}` : '-');
+    document.getElementById('ticket-provider-tx').textContent =
+      compra.idTransaccionProveedor || '-';
+    document.getElementById('ticket-upc').textContent = compra.codigoUpc || 'N/A';
+    document.getElementById('ticket-auth').textContent =
+      compra.autorizacionGestoPago || '-';
     document.getElementById('ticket-servicio').textContent = compra.servicio || 'Servicio';
     document.getElementById('ticket-producto').textContent = compra.producto || 'Producto';
     document.getElementById('ticket-referencia').textContent = compra.referencia || '-';
-    document.getElementById('ticket-cuenta').textContent = `•••• •••• ${(compra.numeroCuenta || '').slice(-4)}`;
-    document.getElementById('ticket-monto').textContent = `$${parseFloat(compra.monto || 0).toFixed(2)} MXN`;
-    document.getElementById('ticket-saldo-ant').textContent = compra.saldoAnterior ? `$${parseFloat(compra.saldoAnterior).toFixed(2)} MXN` : '-';
-    document.getElementById('ticket-saldo-nuevo').textContent = compra.saldoNuevo ? `$${parseFloat(compra.saldoNuevo).toFixed(2)} MXN` : '-';
+    document.getElementById('ticket-cuenta').textContent = compra.numeroCuenta
+      ? `•••• •••• ${String(compra.numeroCuenta).slice(-4)}`
+      : '-';
+
+    if (montoEl) {
+      montoEl.textContent = `$${parseFloat(compra.monto || 0).toFixed(2)} MXN`;
+      montoEl.style.color = esExitosa ? 'var(--accent)' : 'var(--danger)';
+    }
+    document.getElementById('ticket-saldo-ant').textContent = compra.saldoAnterior != null
+      ? `$${parseFloat(compra.saldoAnterior).toFixed(2)} MXN`
+      : '-';
+    document.getElementById('ticket-saldo-nuevo').textContent = compra.saldoNuevo != null
+      ? `$${parseFloat(compra.saldoNuevo).toFixed(2)} MXN`
+      : (compra.saldoAnterior != null && !esExitosa ? `$${parseFloat(compra.saldoAnterior).toFixed(2)} MXN` : '-');
     document.getElementById('ticket-idempotencia').textContent = compra.idempotencyKey || '-';
-    document.getElementById('ticket-fecha').textContent = compra.fecha 
-      ? new Date(compra.fecha).toLocaleString('es-MX') 
+    document.getElementById('ticket-fecha').textContent = compra.fecha
+      ? new Date(compra.fecha).toLocaleString('es-MX')
       : new Date().toLocaleString('es-MX');
 
     const leyendaBox = document.getElementById('ticket-leyenda-box');

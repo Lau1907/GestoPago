@@ -41,7 +41,8 @@ const AppConfig = {
       consultarPago: `${base}/pagos/consultar`,
       historial: `${base}/pagos/historial`,
       cuentas: `${base}/cuentas/buscar`,
-      cliente: `${base}/clientes/consultar`
+      cliente: `${base}/clientes/consultar`,
+      registroCliente: `${base}/clientes`
     };
   }
 };
